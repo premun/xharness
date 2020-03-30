@@ -6,8 +6,9 @@ using System.Text;
 using System.Threading.Tasks;
 using Microsoft.DotNet.XHarness.iOS.Shared.TestImporter;
 using Microsoft.DotNet.XHarness.iOS.Shared.TestImporter.Templates;
+using Xharness.TestImporter.Templates.Managed;
 
-namespace Xharness.TestImporter.Templates.Managed {
+namespace Microsoft.DotNet.XHarness.iOS.Shared.TestImporter.Templates.Managed {
 
 	// template project that uses the Xamarin.iOS and Xamarin.Mac frameworks
 	// to create a testing application for given xunit and nunit test assemblies
@@ -263,9 +264,8 @@ namespace Xharness.TestImporter.Templates.Managed {
 		public static string GetReferenceNode (string assemblyName, string hintPath = null)
 		{
 			// lets not complicate our life with Xml, we just need to replace two things
-			if (string.IsNullOrEmpty (hintPath)) {
-				return $"<Reference Include=\"{assemblyName}\" />";
-			} else {
+			if (string.IsNullOrEmpty (hintPath)) return $"<Reference Include=\"{assemblyName}\" />";
+			else {
 				// the hint path is using unix separators, we need to use windows ones
 				hintPath = hintPath.Replace ('/', '\\');
 				var sb = new StringBuilder ();
@@ -361,9 +361,8 @@ namespace Xharness.TestImporter.Templates.Managed {
 		{
 			var rootAssembliesPath = AssemblyLocator.GetAssembliesRootLocation (Platform.WatchOS).Replace ("/", "\\");
 			var sb = new StringBuilder ();
-			if (!string.IsNullOrEmpty (info.FailureMessage)) {
-				WriteReferenceFailure (sb, info.FailureMessage);
-			} else {
+			if (!string.IsNullOrEmpty (info.FailureMessage)) WriteReferenceFailure (sb, info.FailureMessage);
+			else {
 				foreach (var assemblyInfo in info.Assemblies) {
 					if (ProjectFilter == null || !ProjectFilter.ExcludeDll (Platform.WatchOS, assemblyInfo.assembly))
 						sb.AppendLine (GetReferenceNode (assemblyInfo.assembly, assemblyInfo.hintPath));
@@ -400,9 +399,7 @@ namespace Xharness.TestImporter.Templates.Managed {
 				if (!projectDefinition.Validate ())
 					throw new InvalidOperationException ("xUnit and NUnit assemblies cannot be mixed in a test project.");
 				var generatedCodeDir = Path.Combine (GeneratedCodePathRoot, projectDefinition.Name, "watch");
-				if (!Directory.Exists (generatedCodeDir)) {
-					Directory.CreateDirectory (generatedCodeDir);
-				}
+				if (!Directory.Exists (generatedCodeDir)) Directory.CreateDirectory (generatedCodeDir);
 				var registerTypePath = Path.Combine (generatedCodeDir, "RegisterType.cs");
 				string failure = null;
 				string rootProjectPath = GetProjectPath (projectDefinition.Name, Platform.WatchOS); ;
@@ -486,9 +483,8 @@ namespace Xharness.TestImporter.Templates.Managed {
 			// fix possible issues with the paths to be included in the msbuild xml
 			infoPlistPath = infoPlistPath.Replace ('/', '\\');
 			var sb = new StringBuilder ();
-			if (!string.IsNullOrEmpty (info.FailureMessage)) {
-				WriteReferenceFailure (sb, info.FailureMessage);
-			} else {
+			if (!string.IsNullOrEmpty (info.FailureMessage)) WriteReferenceFailure (sb, info.FailureMessage);
+			else {
 				foreach (var assemblyInfo in info.Assemblies) {
 					if (ProjectFilter == null || !ProjectFilter.ExcludeDll (Platform.iOS, assemblyInfo.assembly))
 						sb.AppendLine (GetReferenceNode (assemblyInfo.assembly, assemblyInfo.hintPath));
@@ -526,10 +522,8 @@ namespace Xharness.TestImporter.Templates.Managed {
 				if (!projectDefinition.Validate ())
 					throw new InvalidOperationException ("xUnit and NUnit assemblies cannot be mixed in a test project.");
 				// generate the required type registration info
-				var generatedCodeDir = Path.Combine (GeneratedCodePathRoot, projectDefinition.Name, (platform == Platform.iOS) ? "ios" : "tv");
-				if (!Directory.Exists (generatedCodeDir)) {
-					Directory.CreateDirectory (generatedCodeDir);
-				}
+				var generatedCodeDir = Path.Combine (GeneratedCodePathRoot, projectDefinition.Name, platform == Platform.iOS ? "ios" : "tv");
+				if (!Directory.Exists (generatedCodeDir)) Directory.CreateDirectory (generatedCodeDir);
 				var registerTypePath = Path.Combine (generatedCodeDir, "RegisterType.cs");
 
 				string projectPath = GetProjectPath (projectDefinition.Name, platform);
@@ -573,9 +567,8 @@ namespace Xharness.TestImporter.Templates.Managed {
 			var downloadPath = Path.Combine (AssemblyLocator.GetAssembliesRootLocation (platform), "mac-bcl", platform == Platform.MacOSFull ? "xammac_net_4_5" : "xammac").Replace ("/", "\\");
 			infoPlistPath = infoPlistPath.Replace ('/', '\\');
 			var sb = new StringBuilder ();
-			if (!string.IsNullOrEmpty (info.FailureMessage)) {
-				WriteReferenceFailure (sb, info.FailureMessage);
-			} else {
+			if (!string.IsNullOrEmpty (info.FailureMessage)) WriteReferenceFailure (sb, info.FailureMessage);
+			else {
 				foreach (var assemblyInfo in info.Assemblies) {
 					if (ProjectFilter == null || !ProjectFilter.ExcludeDll (platform, assemblyInfo.assembly))
 						sb.AppendLine (GetReferenceNode (assemblyInfo.assembly, assemblyInfo.hintPath));
