@@ -2,7 +2,7 @@
 
 namespace Microsoft.DotNet.XHarness.iOS.Shared {
 	public static class SdkVersions {
-		public const string Xcode = "11.3";
+		public const string Xcode = "11.4";
 		public const string OSX = "10.15";
 		public const string iOS = "13.2";
 		public const string WatchOS = "6.1";
