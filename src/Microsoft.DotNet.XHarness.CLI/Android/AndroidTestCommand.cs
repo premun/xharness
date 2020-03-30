@@ -62,7 +62,7 @@ namespace Microsoft.DotNet.XHarness.CLI.Android
 
         public override int Invoke(IEnumerable<string> arguments)
         {
-            // Deal with unknown options and print nicely 
+            // Deal with unknown options and print nicely
             var extra = Options.Parse(arguments);
             if (ShowHelp)
             {
