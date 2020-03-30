@@ -105,11 +105,14 @@ namespace Microsoft.DotNet.XHarness.CLI.iOS
                     xmlResultJargon: XmlResultJargon.NUnitV3);
 
                 // TODO try {}
-                var result = appRunner.InstallAsync(cancellationToken).ConfigureAwait(true).GetAwaiter().GetResult();
-                if (!result.Succeeded)
+                if (!target.IsSimulator())
                 {
-                    Console.Error.WriteLine("Failed to install the app bundle"); // TODO: Better error
-                    return result.ExitCode;
+                    var result = appRunner.InstallAsync(cancellationToken).ConfigureAwait(true).GetAwaiter().GetResult();
+                    if (!result.Succeeded)
+                    {
+                        Console.Error.WriteLine("Failed to install the app bundle"); // TODO: Better error
+                        return result.ExitCode;
+                    }
                 }
 
                 // TODO try {}

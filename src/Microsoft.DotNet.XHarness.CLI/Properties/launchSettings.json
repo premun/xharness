@@ -2,7 +2,7 @@
   "profiles": {
     "XHarness": {
       "commandName": "Project",
-      "commandLineArgs": " ios package -n=FoobittyBar --working-directory=workdir --output-directory=outdir"
+      "commandLineArgs": "ios test -a=\"/Users/prvysoky/Desktop/test/com.xamarin.bcltests.mscorlib Part 1.app\" --working-directory=/Users/prvysoky/Desktop/test/workdir --output-directory=/Users/prvysoky/Desktop/test/outdir --xcode-root=/Applications/Xcode114.app --mlaunch-path=/Users/prvysoky/Desktop/xamarin-macios/_ios-build/Library/Frameworks/Xamarin.iOS.framework/Versions/git/bin/mlaunch --targets=ios-simulator-64"
     }
   }
 }

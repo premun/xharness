@@ -15,4 +15,8 @@
   <ItemGroup>
     <PackageReference Include="Mono.Options" Version="6.6.0.161" />
   </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Microsoft.DotNet.XHarness.iOS\Microsoft.DotNet.XHarness.iOS.csproj" />
+  </ItemGroup>
 </Project>
