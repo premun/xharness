@@ -10,7 +10,7 @@ namespace Microsoft.DotNet.XHarness.iOS.TestProjects
 {
     public class TestProject
     {
-        XmlDocument xml;
+        private XmlDocument xml;
 
         public string Path { get; set; }
         public string SolutionPath { get; set; }
