@@ -4,6 +4,10 @@ VisualStudioVersion = 16.0.29920.165
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Microsoft.DotNet.XHarness.CLI", "Microsoft.DotNet.XHarness.CLI\Microsoft.DotNet.XHarness.CLI.csproj", "{A2966C56-1F72-44BF-8916-4D981E193F57}"
 EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Microsoft.DotNet.XHarness.iOS.Shared", "Microsoft.DotNet.XHarness.iOS.Shared\Microsoft.DotNet.XHarness.iOS.Shared.csproj", "{02A196A6-A67D-4D71-AEBD-1B2749EEE44D}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Microsoft.DotNet.XHarness.iOS", "Microsoft.DotNet.XHarness.iOS\Microsoft.DotNet.XHarness.iOS.csproj", "{2521F6BD-E18A-4E6A-A57C-7EDD90B10FF7}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -14,6 +18,14 @@ Global
 		{A2966C56-1F72-44BF-8916-4D981E193F57}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{A2966C56-1F72-44BF-8916-4D981E193F57}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{A2966C56-1F72-44BF-8916-4D981E193F57}.Release|Any CPU.Build.0 = Release|Any CPU
+		{02A196A6-A67D-4D71-AEBD-1B2749EEE44D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{02A196A6-A67D-4D71-AEBD-1B2749EEE44D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{02A196A6-A67D-4D71-AEBD-1B2749EEE44D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{02A196A6-A67D-4D71-AEBD-1B2749EEE44D}.Release|Any CPU.Build.0 = Release|Any CPU
+		{2521F6BD-E18A-4E6A-A57C-7EDD90B10FF7}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{2521F6BD-E18A-4E6A-A57C-7EDD90B10FF7}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{2521F6BD-E18A-4E6A-A57C-7EDD90B10FF7}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{2521F6BD-E18A-4E6A-A57C-7EDD90B10FF7}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
