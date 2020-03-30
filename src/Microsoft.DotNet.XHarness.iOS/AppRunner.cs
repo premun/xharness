@@ -15,7 +15,7 @@ using Microsoft.DotNet.XHarness.iOS.Shared.Utilities;
 
 namespace Microsoft.DotNet.XHarness.iOS
 {
-    internal class AppRunner
+    public class AppRunner
     {
         private readonly IProcessManager _processManager;
         private readonly ISimulatorsLoaderFactory _simulatorsLoaderFactory;
@@ -28,16 +28,14 @@ namespace Microsoft.DotNet.XHarness.iOS
         private readonly RunMode _runMode;
         private readonly bool _isSimulator;
         private readonly TestTarget _target;
+        private readonly double _timeoutInMinutes;
+        private readonly double _launchTimeoutInMinutes = 15; // TODO
         private readonly double _timeoutMultiplier;
         private readonly XmlResultJargon _xmlResultJargon;
         private readonly int _verbosity = 3;
         private string _deviceName;
         private string _companionDeviceName;
         private ISimulatorDevice[] _simulators;
-
-        // TODO
-        private readonly double _timeoutInMinutes = 15;
-        private readonly double _launchTimeoutInMinutes = 15;
 
         private ISimulatorDevice simulator => _simulators[0];
 
@@ -62,7 +60,6 @@ namespace Microsoft.DotNet.XHarness.iOS
         public ILogs Logs { get; }
 
         public AppRunner(IProcessManager processManager,
-                          IAppBundleInformationParser appBundleInformationParser,
                           ISimulatorsLoaderFactory simulatorsFactory,
                           ISimpleListenerFactory simpleListenerFactory,
                           IDeviceLoaderFactory devicesFactory,
@@ -73,21 +70,16 @@ namespace Microsoft.DotNet.XHarness.iOS
                           TestTarget target,
                           ILog mainLog,
                           ILogs logs,
-                          string projectFilePath,
-                          string buildConfiguration,
+                          string appBundlePath,
                           ISimulatorDevice[] simulators = null,
                           string deviceName = null,
                           string companionDeviceName = null,
                           bool ensureCleanSimulatorState = false,
+                          double timeoutInMinutes = 15,
                           double timeoutMultiplier = 1,
                           string variation = null,
                           XmlResultJargon xmlResultJargon = XmlResultJargon.xUnit)
         {
-            if (appBundleInformationParser is null)
-            {
-                throw new ArgumentNullException(nameof(appBundleInformationParser));
-            }
-
             MainLog = mainLog ?? throw new ArgumentNullException(nameof(mainLog));
             Logs = logs ?? throw new ArgumentNullException(nameof(logs));
 
@@ -104,13 +96,23 @@ namespace Microsoft.DotNet.XHarness.iOS
             _deviceName = deviceName;
             _companionDeviceName = companionDeviceName;
             _ensureCleanSimulatorState = ensureCleanSimulatorState;
+            _timeoutInMinutes = timeoutInMinutes;
             _simulators = simulators;
             _target = target;
 
             _runMode = target.ToRunMode();
             _isSimulator = target.IsSimulator();
-            AppInformation = appBundleInformationParser.ParseFromProject(projectFilePath, target, buildConfiguration);
-            AppInformation.Variation = variation;
+
+            // TODO
+            AppInformation = new AppBundleInformation(
+                appName: Path.GetFileName(appBundlePath).Replace(".app", string.Empty),
+                bundleIdentifier: Path.GetFileName(appBundlePath),
+                appPath: appBundlePath,
+                launchAppPath: Path.GetDirectoryName(appBundlePath),
+                extension: null)
+            {
+                Variation = variation
+            };
         }
 
         private async Task<bool> FindSimulatorAsync()
