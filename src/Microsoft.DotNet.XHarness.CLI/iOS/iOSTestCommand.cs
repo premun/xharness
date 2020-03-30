@@ -88,6 +88,8 @@ namespace Microsoft.DotNet.XHarness.CLI.iOS
 
             foreach (var target in _targets)
             {
+                ILog mainLog = logs.Create(Path.Combine(_outputDirectory, target + "-run.log"), LogType.ExecutionLog.ToString(), true);
+
                 var appRunner = new AppRunner(
                     processManager,
                     new SimulatorsLoaderFactory(processManager),
@@ -98,7 +100,7 @@ namespace Microsoft.DotNet.XHarness.CLI.iOS
                     new DeviceLogCapturerFactory(processManager),
                     new TestReporterFactory(processManager),
                     target,
-                    logs.Create(Path.Combine(_outputDirectory, target + "-run.log"), LogType.ExecutionLog.ToString(), true),
+                    Log.CreateAggregatedLog(mainLog, new ConsoleLog()),
                     logs,
                     _applicationPath,
                     timeoutInMinutes: _timeoutInSeconds * 60,

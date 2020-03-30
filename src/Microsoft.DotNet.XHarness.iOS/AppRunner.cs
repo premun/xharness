@@ -108,7 +108,7 @@ namespace Microsoft.DotNet.XHarness.iOS
                 appName: Path.GetFileName(appBundlePath).Replace(".app", string.Empty),
                 bundleIdentifier: Path.GetFileName(appBundlePath),
                 appPath: appBundlePath,
-                launchAppPath: Path.GetDirectoryName(appBundlePath),
+                launchAppPath: appBundlePath,
                 extension: null)
             {
                 Variation = variation

@@ -18,7 +18,7 @@ namespace Microsoft.DotNet.XHarness.iOS.Shared {
 		public const string MinWatchOSCompanionSimulator = "10.3";
 		public const string MinTVOSSimulator = "10.2";
 
-		public const string MaxiOSSimulator = "13.3";
+		public const string MaxiOSSimulator = "13.0";
 		public const string MaxWatchOSSimulator = "6.1";
 		public const string MaxWatchOSCompanionSimulator = "13.3";
 		public const string MaxTVOSSimulator = "13.3";
