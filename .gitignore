@@ -352,3 +352,5 @@ MigrationBackup/
 # Local installations of .net core
 .dotnet/
 
+# mac os x noise 
+.DS_Store
