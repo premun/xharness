@@ -99,7 +99,7 @@
     <EmbeddedResource Include="TestImporter\Templates\Managed\Resources\src\watchOS\App\Entitlements.plist" />
     <EmbeddedResource Include="TestImporter\Templates\Managed\Resources\src\watchOS\App\Images.xcassets\AppIcons.appiconset\Contents.json" />
     <EmbeddedResource Include="TestImporter\Templates\Managed\Resources\src\watchOS\App\Images.xcassets\AppIcons.appiconset\Icon-24x24%402x.png" />
-    <EmbeddedResource Include="TestImporter\Templates\Managed\Resources\src\watchOS\App\Images.xcassets\AppIcons.appiconset\Icon-27.5x27.5%402x.png" />
+    <EmbeddedResource Include="TestImporter\Templates\Managed\Resources\src\watchOS\App\Images.xcassets\AppIcons.appiconset\Icon-275x275%402x.png" />
     <EmbeddedResource Include="TestImporter\Templates\Managed\Resources\src\watchOS\App\Images.xcassets\AppIcons.appiconset\Icon-29x29%402x.png" />
     <EmbeddedResource Include="TestImporter\Templates\Managed\Resources\src\watchOS\App\Images.xcassets\AppIcons.appiconset\Icon-29x29%403x.png" />
     <EmbeddedResource Include="TestImporter\Templates\Managed\Resources\src\watchOS\App\Images.xcassets\AppIcons.appiconset\Icon-40x40%402x.png" />
@@ -109,7 +109,7 @@
     <EmbeddedResource Include="TestImporter\Templates\Managed\Resources\src\watchOS\App\Interface.storyboard" />
     <EmbeddedResource Include="TestImporter\Templates\Managed\Resources\src\watchOS\App\Resources\Images.xcassets\AppIcons.appiconset\Contents.json" />
     <EmbeddedResource Include="TestImporter\Templates\Managed\Resources\src\watchOS\App\Resources\Images.xcassets\AppIcons.appiconset\Icon-24x24%402x.png" />
-    <EmbeddedResource Include="TestImporter\Templates\Managed\Resources\src\watchOS\App\Resources\Images.xcassets\AppIcons.appiconset\Icon-27.5x27.5%402x.png" />
+    <EmbeddedResource Include="TestImporter\Templates\Managed\Resources\src\watchOS\App\Resources\Images.xcassets\AppIcons.appiconset\Icon-275x275%402x.png" />
     <EmbeddedResource Include="TestImporter\Templates\Managed\Resources\src\watchOS\App\Resources\Images.xcassets\AppIcons.appiconset\Icon-29x29%402x.png" />
     <EmbeddedResource Include="TestImporter\Templates\Managed\Resources\src\watchOS\App\Resources\Images.xcassets\AppIcons.appiconset\Icon-29x29%403x.png" />
     <EmbeddedResource Include="TestImporter\Templates\Managed\Resources\src\watchOS\App\Resources\Images.xcassets\AppIcons.appiconset\Icon-40x40%402x.png" />
@@ -128,6 +128,34 @@
     <EmbeddedResource Include="TestImporter\Templates\Managed\Resources\src\watchOS\Container\ViewController.designer.cs" />
     <EmbeddedResource Include="TestImporter\Templates\Managed\Resources\src\watchOS\Extension\InterfaceController.cs" />
     <EmbeddedResource Include="TestImporter\Templates\Managed\Resources\src\watchOS\Extension\InterfaceController.fs" />
+    <EmbeddedResource Include="TestImporter\Templates\Managed\Resources\src\iOSApp\Assets.xcassets\AppIcon.appiconset\Contents.json">
+      <XlfSourceFormat></XlfSourceFormat>
+      <XlfOutputItem></XlfOutputItem>
+    </EmbeddedResource>
+    <EmbeddedResource Include="TestImporter\Templates\Managed\Resources\src\iOSApp\Assets.xcassets\Contents.json">
+      <XlfSourceFormat></XlfSourceFormat>
+      <XlfOutputItem></XlfOutputItem>
+    </EmbeddedResource>
+    <EmbeddedResource Include="TestImporter\Templates\Managed\Resources\src\tvOSApp\Assets.xcassets\AppIcon.appiconset\Contents.json">
+      <XlfSourceFormat></XlfSourceFormat>
+      <XlfOutputItem></XlfOutputItem>
+    </EmbeddedResource>
+    <EmbeddedResource Include="TestImporter\Templates\Managed\Resources\src\tvOSApp\Assets.xcassets\Contents.json">
+      <XlfSourceFormat></XlfSourceFormat>
+      <XlfOutputItem></XlfOutputItem>
+    </EmbeddedResource>
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="TestImporter\Templates\Managed\Resources\src\iOSApp\Assets.xcassets\" />
+    <Folder Include="TestImporter\Templates\Managed\Resources\src\iOSApp\Assets.xcassets\AppIcon.appiconset\" />
+    <Folder Include="TestImporter\Templates\Managed\Resources\src\tvOSApp\Assets.xcassets\" />
+    <Folder Include="TestImporter\Templates\Managed\Resources\src\tvOSApp\Assets.xcassets\AppIcon.appiconset\" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Remove="TestImporter\Templates\Managed\Resources\src\iOSApp\Assets.xcassets\AppIcon.appiconset\Contents.json" />
+    <None Remove="TestImporter\Templates\Managed\Resources\src\iOSApp\Assets.xcassets\Contents.json" />
+    <None Remove="TestImporter\Templates\Managed\Resources\src\tvOSApp\Assets.xcassets\AppIcon.appiconset\Contents.json" />
+    <None Remove="TestImporter\Templates\Managed\Resources\src\tvOSApp\Assets.xcassets\Contents.json" />
+  </ItemGroup>
 </Project>
