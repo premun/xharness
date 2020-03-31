@@ -4,10 +4,14 @@
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
+using Microsoft.DotNet.XHarness.iOS.Shared.Execution;
+using Microsoft.DotNet.XHarness.iOS.Shared.Logging;
 using Microsoft.DotNet.XHarness.iOS.Shared.TestImporter;
 using Microsoft.DotNet.XHarness.iOS.Shared.TestImporter.Templates;
 using Microsoft.DotNet.XHarness.iOS.Shared.TestImporter.Templates.Managed;
+using Microsoft.DotNet.XHarness.iOS.Shared.Utilities;
 using Microsoft.DotNet.XHarness.iOS.TestImporter;
 using Mono.Options;
 
@@ -22,12 +26,28 @@ namespace Microsoft.DotNet.XHarness.CLI.iOS
         Native,
     }
 
+    public enum BuildConfiguration
+    {
+        Debug,
+        Release,
+        Release32,
+        Release64,
+    }
+
+    // TODO: not nice, I'd like to be able to choose tvOS, watchOS, etc
+    public enum Platform {
+        iPhone,
+        iPhoneSimulator
+    }
+
     // Command that will create the required project generation for the iOS plaform. The command will ensure that all
     // required .csproj and src are created. The command is part of the parent CommandSet iOS and exposes similar
     // plus extra options to the one that its Android counterpart exposes.
     public class iOSPackageCommand : Command
     {
-
+        // TODO: constants, we have to decide what to do with this
+        private const string _nugetPath = "/Library/Frameworks/Mono.framework/Versions/Current/Commands/nuget";
+        private const string _xiPath = "/Library/Frameworks/Mono.framework/Versions/Current/bin/msbuild";
         private bool _showHelp = false;
 
         // working directories
@@ -50,6 +70,12 @@ namespace Microsoft.DotNet.XHarness.CLI.iOS
         private List<Platform> _platforms = new List<Platform>();
         public List<string> _assemblies = new List<string>();
 
+        // info required for the compilation
+        private BuildConfiguration _buildConfiguration = BuildConfiguration.Debug;
+
+        // helper object
+        private readonly IProcessManager _processManager = new ProcessManager();
+
         public iOSPackageCommand() : base("package")
         {
             Options = new OptionSet() {
@@ -63,6 +89,7 @@ namespace Microsoft.DotNet.XHarness.CLI.iOS
                 { "output-directory=|o=", "Directory in which the resulting package will be outputted", v => _outputDirectory = v},
                 { "working-directory=|w=", "Directory that will be used to output generated projects", v => _workingDirectory = v },
                 { "assembly=|a=", "An assembly to be added as part of the testing application", v => _assemblies.Add (v)},
+                { "configuration=", "The configuration that will be used to build the app. Default it 'Debuf'", v => Enum.TryParse (v, out _buildConfiguration)},
                 { "testing-framework=|tf=", "The testing framework that is used by the given assemblies.",
                     v => {
                         if (Enum.TryParse(v, out TestingFramework framework))
@@ -92,6 +119,19 @@ namespace Microsoft.DotNet.XHarness.CLI.iOS
                 },
                 { "help|h", "Show this message", v => _showHelp = v != null },
             };
+        }
+
+        protected virtual List<string> GetBuldArguments(string projectPath, string projectPlatform)
+        {
+			var binlogPath = Path.Combine(_workingDirectory, "appbuild.binlog");
+
+			var args = new List<string>();
+			args.Add("/verbosity:diagnostic");
+			args.Add($"/bl:{binlogPath}");
+            args.Add($"/p:Platform={projectPlatform}");
+            args.Add($"/p:Configuration={_buildConfiguration.ToString()}");
+			args.Add(projectPath);
+			return args;
         }
 
         public override int Invoke(IEnumerable<string> arguments)
@@ -152,7 +192,7 @@ namespace Microsoft.DotNet.XHarness.CLI.iOS
             if (_platforms.Count == 0) {
                 Console.WriteLine("0 platforms found. At least one platform must be provided to create the application. Available platforms are:");
                 // we in theory support Mac and its flavours, but we are not going to do it at this point
-                foreach (var p in new[] { Platform.iOS, Platform.TvOS, Platform.WatchOS}) {
+                foreach (var p in new[] { Platform.iPhone, Platform.iPhoneSimulator}) {
                     Console.WriteLine(p);
                 }
             }
@@ -190,18 +230,74 @@ namespace Microsoft.DotNet.XHarness.CLI.iOS
                     return 1;
 			}
 
+            var logs = new Logs(_workingDirectory);
+            var runLog = logs.Create("run-log.txt", "Run Log");
+            var consoleLog = new ConsoleLog();
+            var aggregatedLog = Log.CreateAggregatedLog(runLog, consoleLog);
+
+            aggregatedLog.WriteLine("Generating scaffold app with:");
+            aggregatedLog.WriteLine($"\tAppname: '{_applicationName}'");
+            aggregatedLog.WriteLine($"\tAssemblies: '{string.Join(" ", _assemblies)}'");
+            aggregatedLog.WriteLine($"\tExtraArgs: '{_mtouchExtraArgs}'");
             // first step, generate the required info to be passed to the factory
             var projects = new List<(string Name, string[] Assemblies, string ExtraArgs, double TimeoutMultiplier)> { 
                 (Name: _applicationName, Assemblies: _assemblies.ToArray(), ExtraArgs: _mtouchExtraArgs, TimeoutMultiplier: _timeoutMultiplier),
             };
+
+            // TODO: we are not taking into account all the plaforms, just iOS
             GeneratedProjects allProjects = new GeneratedProjects();
             foreach (var p in _platforms)
             {
                 // so wish that mono.options allowed use to use async :/
-                allProjects.AddRange (template.GenerateTestProjectsAsync(projects, p).ConfigureAwait(true).GetAwaiter().GetResult());
+                allProjects.AddRange (template.GenerateTestProjectsAsync(projects, XHarness.iOS.Shared.TestImporter.Platform.iOS).ConfigureAwait(true).GetAwaiter().GetResult());
             }
 
-            // we do have all the required projects :), time to compile them
+            // we do have all the required projects :) time to compile them
+            aggregatedLog.WriteLine("Scaffold app generatoed.");
+            // first step, nuget restore what ever is needed
+            var projectPath = Path.Combine(_outputDirectory, _applicationName + ".csproj");
+            aggregatedLog.WriteLine($"Project path is {projectPath}");
+            aggregatedLog.WriteLine($"Performing nuget restore.");
+            using (var nuget = new Process())
+            {
+                nuget.StartInfo.FileName = "/Library/Frameworks/Mono.framework/Versions/Current/Commands/nuget";
+                var args = new List<string>();
+                args.Add("restore"); // diff param depending on the tool
+                args.Add(projectPath);
+                args.Add("-verbosity");
+                args.Add("detailed");
+
+                nuget.StartInfo.Arguments = StringUtils.FormatArguments(args);
+
+                var timeout = TimeSpan.FromMinutes(15);
+                var result = _processManager.RunAsync(nuget, aggregatedLog, timeout).ConfigureAwait(true).GetAwaiter().GetResult();
+                if (result.TimedOut) {
+                    aggregatedLog.WriteLine("nuget restore timedout.");
+                    return 1;
+                }
+                if (!result.Succeeded) {
+                    aggregatedLog.WriteLine($"nuget restore exited with {result.ExitCode}");
+                    return 1;
+                }
+            }
+
+            // perform the build of the application
+            using (var xbuild = new Process())
+            {
+                xbuild.StartInfo.FileName = _xiPath;
+                xbuild.StartInfo.Arguments = StringUtils.FormatArguments(GetBuldArguments(projectPath, _platforms[0].ToString())); // TODO: Only taking into account one!!! :(
+                aggregatedLog.WriteLine($"Building {_applicationName} ({projectPath})");
+                var timeout = TimeSpan.FromMinutes(60);
+                var result = _processManager.RunAsync(xbuild, aggregatedLog, timeout).ConfigureAwait(true).GetAwaiter().GetResult();
+                if (result.TimedOut)
+                {
+                    aggregatedLog.WriteLine("Build timed out after {0} seconds.", timeout.TotalSeconds);
+                }
+                else if (result.Succeeded)
+                {
+                    aggregatedLog.WriteLine("Build was successful.");
+                }
+            }
 
             // build the project info that will be used by the template to create the wrapping application
             Console.WriteLine($"iOS Package command called:{Environment.NewLine}Application Name = {_applicationName}");

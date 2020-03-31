@@ -14,6 +14,9 @@ using Microsoft.DotNet.XHarness.iOS.Shared.Execution.Mlaunch;
 
 namespace Microsoft.DotNet.XHarness.iOS.Shared.Execution {
 	public class ProcessManager : IProcessManager {
+		private static string xcodeDefaultPath = "/Applications/Xcode.app";
+		private static string mlaunchDefaultPath = "/Library/Frameworks/Xamarin.iOS.framework/Versions/Current/bin/mlaunch";
+
 		public string XcodeRoot { get; }
 		public string MlaunchPath { get; }
 
@@ -27,6 +30,10 @@ namespace Microsoft.DotNet.XHarness.iOS.Shared.Execution {
 				}
 				return xcode_version;
 			}
+		}
+
+ 		public ProcessManager () : this (xcodeDefaultPath, mlaunchDefaultPath)
+		{ 
 		}
 
 		public ProcessManager (string xcodeRoot, string mlaunchPath)
