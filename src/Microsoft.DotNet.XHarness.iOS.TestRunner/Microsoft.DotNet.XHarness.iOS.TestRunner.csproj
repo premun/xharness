@@ -1,0 +1,32 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Folder Include="Core\" />
+    <Folder Include="xUnit\" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Remove="xUnit\NUnit3Xml.xslt" />
+    <None Remove="xUnit\NUnitXml.xslt" />
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="xUnit\NUnit3Xml.xslt">
+      <XlfSourceFormat></XlfSourceFormat>
+      <XlfOutputItem></XlfOutputItem>
+    </EmbeddedResource>
+    <EmbeddedResource Include="xUnit\NUnitXml.xslt">
+      <XlfSourceFormat></XlfSourceFormat>
+      <XlfOutputItem></XlfOutputItem>
+    </EmbeddedResource>
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="xunit.analyzers" Version="0.10.0" />
+    <PackageReference Include="xunit" Version="2.4.1" />
+    <PackageReference Include="Mono.Options" Version="6.6.0.161" />
+    <PackageReference Include="xunit.extensibility.execution" Version="2.4.1" />
+    <PackageReference Include="xunit.runner.utility" Version="2.4.1" />
+  </ItemGroup>
+</Project>
