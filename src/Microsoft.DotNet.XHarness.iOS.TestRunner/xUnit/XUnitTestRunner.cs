@@ -26,7 +26,9 @@ namespace Microsoft.DotNet.XHarness.iOS.TestRunner.XUnit
     {
         readonly TestMessageSink messageSink;
 
-        XElement assembliesElement;
+        public int? MaxParallelThreads { get; set; }
+
+    XElement assembliesElement;
         List<XUnitFilter> filters = new List<XUnitFilter>();
         bool runAssemblyByDefault;
 
@@ -1004,7 +1006,7 @@ namespace Microsoft.DotNet.XHarness.iOS.TestRunner.XUnit
                     ITestFrameworkExecutionOptions executionOptions = GetFrameworkOptionsForExecution(configuration);
                     executionOptions.SetDisableParallelization(!RunInParallel);
                     executionOptions.SetSynchronousMessageReporting(true);
-                    executionOptions.SetMaxParallelThreads(Environment.ProcessorCount / 2); // lets not be greedy and let the UI breath.
+                    executionOptions.SetMaxParallelThreads(MaxParallelThreads); 
 
                     // set the wait for event cb first, then execute the tests
                     var resultTask = WaitForEvent(resultsSink.Finished, TimeSpan.FromDays(10)).ConfigureAwait(false);

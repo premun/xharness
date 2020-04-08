@@ -25,6 +25,7 @@ namespace Microsoft.DotNet.XHarness.iOS.TestRunner
     /// </summary>
     public abstract class ApplicatonEntryPoint
     {
+        protected abstract int? MaxParallelThreads { get; }
         /// <summary>
         /// Must be implemented and return a class that returns the information
         /// of a device. It can return null.
@@ -78,13 +79,17 @@ namespace Microsoft.DotNet.XHarness.iOS.TestRunner
             logger.MinimumLogLevel = MinimumLogLevel.Info;
             var testAssemblies = GetTestAssemblies();
             Core.TestRunner runner;
-            switch (TestRunner) {
+            switch (TestRunner)
+            {
                 case TestRunner.NUnit:
                     throw new NotImplementedException("The NUnit test runner has not yet been implemened.");
                 default:
-                    runner = new XUnitTestRunner(logger);
+                    runner = new XUnitTestRunner(logger)
+                    {
+                        MaxParallelThreads = MaxParallelThreads
+                    };
                     break;
-			}
+            }
 
             if (!string.IsNullOrEmpty(IgnoreFilesDirectory))
             {
@@ -92,12 +97,12 @@ namespace Microsoft.DotNet.XHarness.iOS.TestRunner
                 // add category filters if they have been added
                 runner.SkipCategories(categories);
 
-				var skippedTests = await IgnoreFileParser.ParseContentFilesAsync(IgnoreFilesDirectory);
-				if (skippedTests.Any())
-				{
-					// ensure that we skip those tests that have been passed via the ignore files
-					runner.SkipTests(skippedTests);
-				}
+                var skippedTests = await IgnoreFileParser.ParseContentFilesAsync(IgnoreFilesDirectory);
+                if (skippedTests.Any())
+                {
+                    // ensure that we skip those tests that have been passed via the ignore files
+                    runner.SkipTests(skippedTests);
+                }
             }
 
             // if we have ignore files, ignore those tests
