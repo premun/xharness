@@ -78,16 +78,9 @@ namespace Microsoft.DotNet.XHarness.iOS.TestRunner.Core
             HostName = SelectHostName(hostName.Split(','), port);
             Port = port;
 
-            try
-            {
-                client = new TcpClient(HostName, port);
-                writer = new StreamWriter(client.GetStream());
-            }
-            catch
-            {
-                throw;
-            }
-        }
+            client = new TcpClient(HostName, port);
+            writer = new StreamWriter(client.GetStream());
+       }
 
         public string HostName { get; private set; }
 
