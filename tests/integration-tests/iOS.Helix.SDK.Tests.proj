@@ -1,5 +1,12 @@
 <Project DefaultTargets="Test">
-  <Import Sdk="Microsoft.DotNet.Helix.Sdk" Project="Sdk.props"/>
+  <!-- TODO: Remove -->
+  <Import Project="/mnt/d/github/arcade/src/Microsoft.DotNet.Helix/Sdk/sdk/Sdk.props"/>
+  <!-- <Import Sdk="Microsoft.DotNet.Helix.Sdk" Project="Sdk.props"/> -->
+
+  <!-- TODO: Remove -->
+  <PropertyGroup>
+    <MicrosoftDotNetHelixSdkTasksAssembly>/mnt/d/github/arcade/artifacts/bin/Microsoft.DotNet.Helix.Sdk/Debug/netcoreapp2.1/publish/Microsoft.DotNet.Helix.Sdk.dll</MicrosoftDotNetHelixSdkTasksAssembly>
+  </PropertyGroup>
 
   <PropertyGroup>
     <HelixType>test/product/</HelixType>
@@ -9,8 +16,8 @@
     <EnableXUnitReporter>true</EnableXUnitReporter>
     <EnableAzurePipelinesReporter>false</EnableAzurePipelinesReporter> <!-- TODO: false -->
     <HelixBaseUri>https://helix.dot.net</HelixBaseUri>
-    <MicrosoftDotNetXHarnessCLIVersion>1.0.0-ci</MicrosoftDotNetXHarnessCLIVersion>
-    <_XHarnessRunnerPackageFeed>$HELIX_CORRELATION_PAYLOAD</_XHarnessRunnerPackageFeed> <!-- We will include the .nupkg in the payload -->
+    <MicrosoftDotNetXHarnessCLIVersion>1.0.0-dev</MicrosoftDotNetXHarnessCLIVersion> <!-- TODO: 1.0.0-ci -->
+    <XHarnessNupkgPath>/mnt/d/github/xharness/artifacts/packages/Debug/Shipping/Microsoft.DotNet.XHarness.CLI.1.0.0-dev.nupkg</XHarnessNupkgPath> <!-- TODO: Artifact unzip location -->
   </PropertyGroup>
 
   <!-- New Test Projects which build app bundles to run through XHarness/XHarness go here -->
@@ -39,5 +46,7 @@
 
   <Target Name="Pack"/>
 
-  <Import Sdk="Microsoft.DotNet.Helix.Sdk" Project="Sdk.targets"/>
+  <!-- TODO: Remove -->
+  <Import Project="/mnt/d/github/arcade/src/Microsoft.DotNet.Helix/Sdk/sdk/Sdk.targets"/>
+  <!-- <Import Sdk="Microsoft.DotNet.Helix.Sdk" Project="Sdk.targets"/> -->
 </Project>
