@@ -1,20 +1,40 @@
 <Project DefaultTargets="Test">
-  <Import Sdk="Microsoft.DotNet.Helix.Sdk" Project="Sdk.props"/>
+  <!-- TODO: Remove -->
+  <Import Project="D:\github\arcade\src\Microsoft.DotNet.Helix\Sdk\sdk\Sdk.props"/>
+  <!-- <Import Sdk="Microsoft.DotNet.Helix.Sdk" Project="Sdk.props"/> -->
+
+  <!-- TODO: Remove -->
+  <PropertyGroup>
+    <MicrosoftDotNetHelixSdkTasksAssembly>D:\github\arcade\artifacts\bin\Microsoft.DotNet.Helix.Sdk\Debug\netcoreapp2.1\publish\Microsoft.DotNet.Helix.Sdk.dll</MicrosoftDotNetHelixSdkTasksAssembly>
+  </PropertyGroup>
 
   <PropertyGroup>
     <TargetFramework>netcoreapp2.1</TargetFramework>
     <HelixType>test/product/</HelixType>
     <IncludeXHarnessCli>true</IncludeXHarnessCli>
     <TestRunNamePrefix>$(AGENT_JOBNAME)</TestRunNamePrefix>
-    <EnableXUnitReporter>true</EnableXUnitReporter>
-    <EnableAzurePipelinesReporter>true</EnableAzurePipelinesReporter>
-    <HelixBaseUri>https://helix.dot.net</HelixBaseUri>
+    <!-- <EnableXUnitReporter>true</EnableXUnitReporter> -->
+    <!-- <EnableAzurePipelinesReporter>true</EnableAzurePipelinesReporter> -->
+    <HelixBaseUri>https://helix.int-dot.net</HelixBaseUri>
     <MicrosoftDotNetXHarnessCLIVersion>1.0.0-ci</MicrosoftDotNetXHarnessCLIVersion>
     <XHarnessNupkgPath>$(MSBuildThisFileDirectory)../../../artifacts/packages/$(Configuration)/Shipping/Microsoft.DotNet.XHarness.CLI.$(MicrosoftDotNetXHarnessCLIVersion).nupkg</XHarnessNupkgPath>
   </PropertyGroup>
 
-  <ItemGroup>
+  <!-- <ItemGroup>
     <XHarnessiOSProject Include="$(MSBuildThisFileDirectory)\iOS.AppBundle.proj" />
+  </ItemGroup> -->
+
+  <ItemGroup>
+    <XHarnessAppBundleToTest Include="$([System.IO.Directory]::GetDirectories(&quot;D:\Playground\SendiOSJob\Payload\apps&quot;))">
+      <Targets>ios-simulator-64</Targets>
+      <WorkItemTimeout>00:40:00</WorkItemTimeout>
+      <TestTimeout>00:35:00</TestTimeout>
+      <LaunchTimeout>00:25:00</LaunchTimeout>
+    </XHarnessAppBundleToTest>
+  </ItemGroup>
+
+  <ItemGroup>
+    <Foo Include="a" />
   </ItemGroup>
 
   <ItemGroup Condition=" '$(HelixAccessToken)' != '' ">
@@ -22,7 +42,7 @@
   </ItemGroup>
 
   <ItemGroup Condition=" '$(HelixAccessToken)' == '' ">
-    <HelixTargetQueue Include="osx.1015.amd64.open"/>
+    <HelixTargetQueue Include="osx.1100.amd64.open"/>
   </ItemGroup>
 
   <PropertyGroup Condition=" '$(HelixAccessToken)' == '' ">
@@ -36,5 +56,5 @@
     <Language>msbuild</Language>
   </PropertyGroup>
 
-  <Import Sdk="Microsoft.DotNet.Helix.Sdk" Project="Sdk.targets"/>
+  <Import Project="D:\github\arcade\src\Microsoft.DotNet.Helix\Sdk\sdk\Sdk.targets"/>
 </Project>
