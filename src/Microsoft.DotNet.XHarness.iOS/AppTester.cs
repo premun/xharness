@@ -260,6 +260,9 @@ namespace Microsoft.DotNet.XHarness.iOS
 
                 _mainLog.WriteLine("Starting test run");
 
+                // TODO: We need to mock the call in 263 to expire to see whether LaunchTimeout will turn it into exit code 83 because
+                // just sending short LaunchTimeout might break everything even before we hit this and then it's 70.
+                // We should then probably decide whether we want this to be 70 or 83.
                 var result = _processManager.ExecuteCommandAsync(mlaunchArguments, _mainLog, timeout, cancellationToken: cancellationToken);
 
                 await testReporter.CollectSimulatorResult(result);
