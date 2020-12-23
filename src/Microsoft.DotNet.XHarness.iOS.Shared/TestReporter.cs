@@ -126,47 +126,51 @@ namespace Microsoft.DotNet.XHarness.iOS.Shared
         /// </summary>
         private async Task<(int pid, bool launchFailure)> GetPidFromRunLog()
         {
-            (int pid, bool launchFailure) pidData = (-1, true);
-            using var reader = _runLog.GetReader(); // diposed at the end of the method, which is what we want
+            using var reader = _runLog.GetReader();
             if (reader.Peek() == -1)
             {
-                // empty file! we definetly had a launch error in this case
-                pidData.launchFailure = true;
+                // Empty file! we definitely had a launch error in this case
+                return (-1, true);
             }
-            else
+
+            int pid = -1;
+            bool launchFailure = true;
+
+            while (!reader.EndOfStream)
             {
-                while (!reader.EndOfStream)
+                var line = await reader.ReadLineAsync();
+
+                if (line == null)
                 {
-                    var line = await reader.ReadLineAsync();
+                    continue;
+                }
 
-                    if (line == null)
-                    {
-                        continue;
-                    }
+                const string launchLine1 = "Application launched. PID = ";
+                const string launchLine2 = "Xamarin.Hosting: Launched ";
 
-                    if (line.StartsWith("Application launched. PID = ", StringComparison.Ordinal))
+                if (line.StartsWith(launchLine1, StringComparison.Ordinal))
+                {
+                    var pidstr = line.Substring(launchLine1.Length).Trim();
+                    if (!int.TryParse(pidstr, out pid))
                     {
-                        var pidstr = line.Substring("Application launched. PID = ".Length);
-                        if (!int.TryParse(pidstr, out pidData.pid))
-                        {
-                            _mainLog.WriteLine("Could not parse pid: {0}", pidstr);
-                        }
-                    }
-                    else if (line.Contains("Xamarin.Hosting: Launched ") && line.Contains(" with pid "))
-                    {
-                        var pidstr = line.Substring(line.LastIndexOf(' '));
-                        if (!int.TryParse(pidstr, out pidData.pid))
-                        {
-                            _mainLog.WriteLine("Could not parse pid: {0}", pidstr);
-                        }
-                    }
-                    else if (line.Contains("error MT1008"))
-                    {
-                        pidData.launchFailure = true;
+                        _mainLog.WriteLine("Could not parse pid: {0}", pidstr);
                     }
                 }
+                else if (line.Contains(launchLine2) && line.Contains(" with pid "))
+                {
+                    var pidstr = line.Substring(line.LastIndexOf(' '));
+                    if (!int.TryParse(pidstr, out pid))
+                    {
+                        _mainLog.WriteLine("Could not parse pid: {0}", pidstr);
+                    }
+                }
+                else if (line.Contains("error MT1008"))
+                {
+                    launchFailure = true;
+                }
             }
-            return pidData;
+
+            return (pid, launchFailure);
         }
 
         /// <summary>
