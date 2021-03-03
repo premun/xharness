@@ -12,11 +12,12 @@ namespace Microsoft.DotNet.XHarness.Common.Logging
     /// <summary>
     /// Class that dynamically updates shows tests as they are being executed.
     /// </summary>
-    public class TestResultConsoleReporter
+    public class TestResultConsoleReporter : IDisposable
     {
         private readonly ILog _testLog;
         private readonly StringBuilder _buffer = new StringBuilder();
         private int _lastLoggedLineLength = 0;
+        private bool _active = true;
 
         public TestResultConsoleReporter()
         {
@@ -26,6 +27,15 @@ namespace Microsoft.DotNet.XHarness.Common.Logging
         public ILog AssignLog<T>(T log) where T : ILog => Log.CreateAggregatedLog(log, _testLog);
 
         public IFileBackedLog AssignLog(IFileBackedLog log) => Log.CreateReadableAggregatedLog(log, _testLog);
+
+        public void Dispose()
+        {
+            _active = false;
+            if (_lastLoggedLineLength != 0)
+            {
+                Console.WriteLine("\r");
+            }
+        }
 
         private void ProcessData(string data)
         {
@@ -59,7 +69,7 @@ namespace Microsoft.DotNet.XHarness.Common.Logging
 
         private void ProcessLine(string line)
         {
-            if (string.IsNullOrEmpty(line))
+            if (!_active || string.IsNullOrEmpty(line))
             {
                 return;
             }

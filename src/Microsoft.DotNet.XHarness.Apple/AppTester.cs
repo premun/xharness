@@ -87,7 +87,7 @@ namespace Microsoft.DotNet.XHarness.Apple
             var runMode = target.Platform.ToRunMode();
             var isSimulator = target.Platform.IsSimulator();
 
-            var consoleReporter = new TestResultConsoleReporter();
+            using var consoleReporter = new TestResultConsoleReporter();
             var deviceListenerLog = _logs.Create($"test-{target.AsString()}-{_helpers.Timestamp}.log", LogType.TestLog.ToString(), timestamp: true);
             deviceListenerLog = consoleReporter.AssignLog(deviceListenerLog);
 
