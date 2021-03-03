@@ -54,13 +54,13 @@ namespace Microsoft.DotNet.XHarness.Apple.Tests
         private readonly Mock<ISimulatorLoader> _simulatorLoader;
         private readonly Mock<ISimpleListener> _listener;
         private readonly Mock<ICrashSnapshotReporter> _snapshotReporter;
-        private readonly Mock<ITestReporter> _testReporter;
+        private readonly Mock<ITestResultParser> _testResultParser;
         private readonly Mock<IHelpers> _helpers;
         private readonly Mock<ITunnelBore> _tunnelBore;
         private readonly Mock<ISimpleListenerFactory> _listenerFactory;
 
         private readonly ICrashSnapshotReporterFactory _snapshotReporterFactory;
-        private readonly ITestReporterFactory _testReporterFactory;
+        private readonly ITestResultParserFactory _testResultParserFactory;
 
         private Mock<IHardwareDeviceLoader> _hardwareDeviceLoader;
 
@@ -91,14 +91,14 @@ namespace Microsoft.DotNet.XHarness.Apple.Tests
 
             _snapshotReporter = new Mock<ICrashSnapshotReporter>();
 
-            _testReporter = new Mock<ITestReporter>();
-            _testReporter
+            _testResultParser = new Mock<ITestResultParser>();
+            _testResultParser
                 .Setup(r => r.Success)
                 .Returns(true);
-            _testReporter
+            _testResultParser
                 .Setup(r => r.ParseResult())
                 .ReturnsAsync((TestExecutingResult.Succeeded, "Tests run: 1194 Passed: 1191 Inconclusive: 0 Failed: 0 Ignored: 0"));
-            _testReporter
+            _testResultParser
                 .Setup(x => x.CollectSimulatorResult(It.IsAny<ProcessExecutionResult>()))
                 .Returns(Task.CompletedTask);
 
@@ -117,9 +117,9 @@ namespace Microsoft.DotNet.XHarness.Apple.Tests
             factory2.SetReturnsDefault(_snapshotReporter.Object);
             _snapshotReporterFactory = factory2.Object;
 
-            var factory3 = new Mock<ITestReporterFactory>();
-            factory3.SetReturnsDefault(_testReporter.Object);
-            _testReporterFactory = factory3.Object;
+            var factory3 = new Mock<ITestResultParserFactory>();
+            factory3.SetReturnsDefault(_testResultParser.Object);
+            _testResultParserFactory = factory3.Object;
 
             _helpers = new Mock<IHelpers>();
             _helpers
@@ -181,7 +181,7 @@ namespace Microsoft.DotNet.XHarness.Apple.Tests
                 _snapshotReporterFactory,
                 captureLogFactory.Object,
                 Mock.Of<IDeviceLogCapturerFactory>(),
-                _testReporterFactory,
+                _testResultParserFactory,
                 new XmlResultParser(),
                 _mainLog.Object,
                 _logs.Object,
@@ -253,7 +253,7 @@ namespace Microsoft.DotNet.XHarness.Apple.Tests
                 _snapshotReporterFactory,
                 captureLogFactory.Object,
                 Mock.Of<IDeviceLogCapturerFactory>(),
-                _testReporterFactory,
+                _testResultParserFactory,
                 new XmlResultParser(),
                 _mainLog.Object,
                 _logs.Object,
@@ -324,7 +324,7 @@ namespace Microsoft.DotNet.XHarness.Apple.Tests
                 _snapshotReporterFactory,
                 Mock.Of<ICaptureLogFactory>(),
                 Mock.Of<IDeviceLogCapturerFactory>(),
-                _testReporterFactory,
+                _testResultParserFactory,
                 new XmlResultParser(),
                 _mainLog.Object,
                 _logs.Object,
@@ -390,7 +390,7 @@ namespace Microsoft.DotNet.XHarness.Apple.Tests
                 _snapshotReporterFactory,
                 Mock.Of<ICaptureLogFactory>(),
                 deviceLogCapturerFactory.Object,
-                _testReporterFactory,
+                _testResultParserFactory,
                 new XmlResultParser(),
                 _mainLog.Object,
                 _logs.Object,
@@ -485,7 +485,7 @@ namespace Microsoft.DotNet.XHarness.Apple.Tests
                 _snapshotReporterFactory,
                 Mock.Of<ICaptureLogFactory>(),
                 deviceLogCapturerFactory.Object,
-                _testReporterFactory,
+                _testResultParserFactory,
                 new XmlResultParser(),
                 _mainLog.Object,
                 _logs.Object,
@@ -574,7 +574,7 @@ namespace Microsoft.DotNet.XHarness.Apple.Tests
                 _snapshotReporterFactory,
                 Mock.Of<ICaptureLogFactory>(),
                 deviceLogCapturerFactory.Object,
-                _testReporterFactory,
+                _testResultParserFactory,
                 new XmlResultParser(),
                 _mainLog.Object,
                 _logs.Object,
@@ -659,7 +659,7 @@ namespace Microsoft.DotNet.XHarness.Apple.Tests
                 _snapshotReporterFactory,
                 captureLogFactory.Object,
                 Mock.Of<IDeviceLogCapturerFactory>(),
-                _testReporterFactory,
+                _testResultParserFactory,
                 new XmlResultParser(),
                 _mainLog.Object,
                 _logs.Object,

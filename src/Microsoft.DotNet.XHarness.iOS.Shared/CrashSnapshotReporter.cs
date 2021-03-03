@@ -115,7 +115,6 @@ namespace Microsoft.DotNet.XHarness.iOS.Shared
 
                 foreach (var cp in crashReports)
                 {
-                    WrenchLog.WriteLine("AddFile: {0}", cp.FullPath);
                     _log.WriteLine("    {0}", cp.FullPath);
                 }
 

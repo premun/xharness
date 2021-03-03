@@ -19,7 +19,7 @@ using Xunit;
 
 namespace Microsoft.DotNet.XHarness.iOS.Shared.Tests
 {
-    public class TestReporterTests : IDisposable
+    public class TestResultParserTests : IDisposable
     {
         private readonly Mock<ICrashSnapshotReporter> _crashReporter;
         private readonly Mock<IMlaunchProcessManager> _processManager;
@@ -32,7 +32,7 @@ namespace Microsoft.DotNet.XHarness.iOS.Shared.Tests
         private readonly string _deviceName = "Device Name";
         private readonly string _logsDirectory;
 
-        public TestReporterTests()
+        public TestResultParserTests()
         {
             _crashReporter = new Mock<ICrashSnapshotReporter>();
             _processManager = new Mock<IMlaunchProcessManager>();
@@ -70,11 +70,11 @@ namespace Microsoft.DotNet.XHarness.iOS.Shared.Tests
             return GetType().Assembly.GetManifestResourceStream(name);
         }
 
-        private TestReporter BuildTestResult()
+        private TestResultParser BuildTestResult()
         {
             _logs.Setup(l => l.Directory).Returns(_logsDirectory);
 
-            return new TestReporter(_processManager.Object,
+            return new TestResultParser(_processManager.Object,
                 _mainLog.Object,
                 _runLog.Object,
                 _logs.Object,
@@ -82,7 +82,6 @@ namespace Microsoft.DotNet.XHarness.iOS.Shared.Tests
                 _listener.Object,
                 _parser,
                 _appInformation,
-                RunMode.Sim64,
                 XmlResultJargon.NUnitV3,
                 _deviceName,
                 TimeSpan.FromSeconds(2));

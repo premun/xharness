@@ -60,7 +60,7 @@ namespace Microsoft.DotNet.XHarness.CLI.Commands.iOS
                 new CrashSnapshotReporterFactory(ProcessManager),
                 new CaptureLogFactory(),
                 new DeviceLogCapturerFactory(ProcessManager),
-                new TestReporterFactory(ProcessManager),
+                new TestResultParserFactory(ProcessManager),
                 new XmlResultParser(),
                 mainLog,
                 logs,

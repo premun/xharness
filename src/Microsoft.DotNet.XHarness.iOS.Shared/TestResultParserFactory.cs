@@ -14,16 +14,15 @@ using ExceptionLogger = System.Action<int, string>;
 #nullable enable
 namespace Microsoft.DotNet.XHarness.iOS.Shared
 {
-    public interface ITestReporterFactory
+    public interface ITestResultParserFactory
     {
-        ITestReporter Create(IFileBackedLog mainLog,
+        ITestResultParser Create(IFileBackedLog mainLog,
             IReadableLog runLog,
             ILogs logs,
             ICrashSnapshotReporter crashSnapshotReporter,
             ISimpleListener simpleListener,
             IResultParser parser,
             AppBundleInformation appInformation,
-            RunMode runMode,
             XmlResultJargon xmlJargon,
             string? device,
             TimeSpan timeout,
@@ -32,29 +31,29 @@ namespace Microsoft.DotNet.XHarness.iOS.Shared
             bool generateHtml = false);
     }
 
-    public class TestReporterFactory : ITestReporterFactory
+    public class TestResultParserFactory : ITestResultParserFactory
     {
         private readonly IMlaunchProcessManager _processManager;
 
-        public TestReporterFactory(IMlaunchProcessManager processManager)
+        public TestResultParserFactory(IMlaunchProcessManager processManager)
         {
             _processManager = processManager ?? throw new ArgumentNullException(nameof(processManager));
         }
 
-        public ITestReporter Create(IFileBackedLog mainLog,
+        public ITestResultParser Create(IFileBackedLog mainLog,
             IReadableLog runLog,
             ILogs logs,
             ICrashSnapshotReporter crashReporter,
             ISimpleListener simpleListener,
             IResultParser parser,
             AppBundleInformation appInformation,
-            RunMode runMode,
             XmlResultJargon xmlJargon,
             string? device,
             TimeSpan timeout,
             string? additionalLogsDirectory = null,
             ExceptionLogger? exceptionLogger = null,
-            bool generateHtml = false) => new TestReporter(_processManager,
+            bool generateHtml = false) => new TestResultParser(
+                _processManager,
                 mainLog,
                 runLog,
                 logs,
@@ -62,7 +61,6 @@ namespace Microsoft.DotNet.XHarness.iOS.Shared
                 simpleListener,
                 parser,
                 appInformation,
-                runMode,
                 xmlJargon,
                 device,
                 timeout,

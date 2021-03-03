@@ -12,7 +12,7 @@ namespace Microsoft.DotNet.XHarness.iOS.Shared
     /// <summary>
     /// Interface that represents a class that knows how to parse test results.
     /// </summary>
-    public interface ITestReporter
+    public interface ITestResultParser
     {
         ILog CallbackLog { get; }
         bool? Success { get; }

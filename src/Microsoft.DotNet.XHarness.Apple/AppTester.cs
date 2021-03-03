@@ -32,7 +32,7 @@ namespace Microsoft.DotNet.XHarness.Apple
         private readonly ICrashSnapshotReporterFactory _snapshotReporterFactory;
         private readonly ICaptureLogFactory _captureLogFactory;
         private readonly IDeviceLogCapturerFactory _deviceLogCapturerFactory;
-        private readonly ITestReporterFactory _testReporterFactory;
+        private readonly ITestResultParserFactory _testResultParserFactory;
         private readonly IResultParser _resultParser;
         private readonly IFileBackedLog _mainLog;
         private readonly ILogs _logs;
@@ -47,7 +47,7 @@ namespace Microsoft.DotNet.XHarness.Apple
             ICrashSnapshotReporterFactory snapshotReporterFactory,
             ICaptureLogFactory captureLogFactory,
             IDeviceLogCapturerFactory deviceLogCapturerFactory,
-            ITestReporterFactory reporterFactory,
+            ITestResultParserFactory reporterFactory,
             IResultParser resultParser,
             IFileBackedLog mainLog,
             ILogs logs,
@@ -62,7 +62,7 @@ namespace Microsoft.DotNet.XHarness.Apple
             _snapshotReporterFactory = snapshotReporterFactory ?? throw new ArgumentNullException(nameof(snapshotReporterFactory));
             _captureLogFactory = captureLogFactory ?? throw new ArgumentNullException(nameof(captureLogFactory));
             _deviceLogCapturerFactory = deviceLogCapturerFactory ?? throw new ArgumentNullException(nameof(deviceLogCapturerFactory));
-            _testReporterFactory = reporterFactory ?? throw new ArgumentNullException(nameof(_testReporterFactory));
+            _testResultParserFactory = reporterFactory ?? throw new ArgumentNullException(nameof(_testResultParserFactory));
             _resultParser = resultParser ?? throw new ArgumentNullException(nameof(resultParser));
             _mainLog = mainLog ?? throw new ArgumentNullException(nameof(mainLog));
             _logs = logs ?? throw new ArgumentNullException(nameof(logs));
@@ -87,7 +87,6 @@ namespace Microsoft.DotNet.XHarness.Apple
             var runMode = target.Platform.ToRunMode();
             var isSimulator = target.Platform.IsSimulator();
 
-            // TODO #459: Get MacCatalyst system logs
             var deviceListenerLog = _logs.Create($"test-{target.AsString()}-{_helpers.Timestamp}.log", LogType.TestLog.ToString(), timestamp: true);
             var (deviceListenerTransport, deviceListener, deviceListenerTmpFile) = _listenerFactory.Create(
                 runMode,
@@ -142,14 +141,13 @@ namespace Microsoft.DotNet.XHarness.Apple
             var crashLogs = new Logs(_logs.Directory);
 
             ICrashSnapshotReporter crashReporter = _snapshotReporterFactory.Create(_mainLog, crashLogs, isDevice: !isSimulator, deviceName);
-            ITestReporter testReporter = _testReporterFactory.Create(_mainLog,
+            ITestResultParser testResultParser = _testResultParserFactory.Create(_mainLog,
                 _mainLog,
                 _logs,
                 crashReporter,
                 deviceListener,
                 _resultParser,
                 appInformation,
-                runMode,
                 xmlResultJargon,
                 deviceName,
                 timeout,
@@ -158,14 +156,14 @@ namespace Microsoft.DotNet.XHarness.Apple
 
             deviceListener.ConnectedTask
                 .TimeoutAfter(testLaunchTimeout)
-                .ContinueWith(testReporter.LaunchCallback)
+                .ContinueWith(testResultParser.LaunchCallback)
                 .DoNotAwait();
 
             _mainLog.WriteLine($"*** Executing '{appInformation.AppName}' on {target.AsString()} '{deviceName}' ***");
 
             try
             {
-                using var combinedCancellationToken = CancellationTokenSource.CreateLinkedTokenSource(testReporter.CancellationToken, cancellationToken);
+                using var combinedCancellationToken = CancellationTokenSource.CreateLinkedTokenSource(testResultParser.CancellationToken, cancellationToken);
 
                 if (isSimulator)
                 {
@@ -190,7 +188,7 @@ namespace Microsoft.DotNet.XHarness.Apple
                         mlaunchArguments,
                         appInformation,
                         crashReporter,
-                        testReporter,
+                        testResultParser,
                         simulator,
                         companionSimulator,
                         ensureCleanSimulatorState,
@@ -214,7 +212,7 @@ namespace Microsoft.DotNet.XHarness.Apple
                     await RunDeviceTests(
                         mlaunchArguments,
                         crashReporter,
-                        testReporter,
+                        testResultParser,
                         deviceListener,
                         deviceName,
                         timeout,
@@ -228,7 +226,7 @@ namespace Microsoft.DotNet.XHarness.Apple
             }
 
             // Check the final status, copy all the required data
-            var (testResult, resultMessage) = await testReporter.ParseResult();
+            var (testResult, resultMessage) = await testResultParser.ParseResult();
 
             return (deviceName, testResult, resultMessage);
         }
@@ -237,7 +235,7 @@ namespace Microsoft.DotNet.XHarness.Apple
             MlaunchArguments mlaunchArguments,
             AppBundleInformation appInformation,
             ICrashSnapshotReporter crashReporter,
-            ITestReporter testReporter,
+            ITestResultParser testResultParser,
             ISimulatorDevice simulator,
             ISimulatorDevice? companionSimulator,
             bool ensureCleanSimulatorState,
@@ -290,7 +288,7 @@ namespace Microsoft.DotNet.XHarness.Apple
                 _mainLog.WriteLine("Starting test run");
 
                 var result = await _processManager.ExecuteCommandAsync(mlaunchArguments, _mainLog, timeout, cancellationToken: cancellationToken);
-                await testReporter.CollectSimulatorResult(result);
+                await testResultParser.CollectSimulatorResult(result);
 
                 // Cleanup after us
                 if (ensureCleanSimulatorState)
@@ -316,7 +314,7 @@ namespace Microsoft.DotNet.XHarness.Apple
         private async Task RunDeviceTests(
             MlaunchArguments mlaunchArguments,
             ICrashSnapshotReporter crashReporter,
-            ITestReporter testReporter,
+            ITestResultParser testResultParser,
             ISimpleListener deviceListener,
             string deviceName,
             TimeSpan timeout,
@@ -343,14 +341,14 @@ namespace Microsoft.DotNet.XHarness.Apple
                 _mainLog.WriteLine("Starting test run");
 
                 // We need to check for MT1111 (which means that mlaunch won't wait for the app to exit).
-                var aggregatedLog = Log.CreateReadableAggregatedLog(_mainLog, testReporter.CallbackLog);
+                var aggregatedLog = Log.CreateReadableAggregatedLog(_mainLog, testResultParser.CallbackLog);
                 var result = await _processManager.ExecuteCommandAsync(
                     mlaunchArguments,
                     aggregatedLog,
                     timeout,
                     cancellationToken: cancellationToken);
 
-                await testReporter.CollectDeviceResult(result);
+                await testResultParser.CollectDeviceResult(result);
             }
             finally
             {
@@ -392,7 +390,7 @@ namespace Microsoft.DotNet.XHarness.Apple
             var crashLogs = new Logs(_logs.Directory);
 
             ICrashSnapshotReporter crashReporter = _snapshotReporterFactory.Create(_mainLog, crashLogs, isDevice: false, null);
-            ITestReporter testReporter = _testReporterFactory.Create(
+            ITestResultParser testResultParser = _testResultParserFactory.Create(
                 _mainLog,
                 _mainLog,
                 _logs,
@@ -400,7 +398,6 @@ namespace Microsoft.DotNet.XHarness.Apple
                 deviceListener,
                 _resultParser,
                 appInformation,
-                RunMode.MacOS,
                 xmlResultJargon,
                 null,
                 timeout,
@@ -409,14 +406,14 @@ namespace Microsoft.DotNet.XHarness.Apple
 
             deviceListener.ConnectedTask
                 .TimeoutAfter(testLaunchTimeout)
-                .ContinueWith(testReporter.LaunchCallback)
+                .ContinueWith(testResultParser.LaunchCallback)
                 .DoNotAwait();
 
             _mainLog.WriteLine($"*** Executing '{appInformation.AppName}' on MacCatalyst ***");
 
             try
             {
-                using var combinedCancellationToken = CancellationTokenSource.CreateLinkedTokenSource(testReporter.CancellationToken, cancellationToken);
+                using var combinedCancellationToken = CancellationTokenSource.CreateLinkedTokenSource(testResultParser.CancellationToken, cancellationToken);
 
                 var envVariables = GetEnvVariables(
                     xmlResultJargon,
@@ -439,7 +436,7 @@ namespace Microsoft.DotNet.XHarness.Apple
                 await crashReporter.StartCaptureAsync();
 
                 var result = await RunMacCatalystApp(appInformation, timeout, _appArguments, envVariables, combinedCancellationToken.Token);
-                await testReporter.CollectSimulatorResult(result);
+                await testResultParser.CollectSimulatorResult(result);
             }
             finally
             {
@@ -447,7 +444,7 @@ namespace Microsoft.DotNet.XHarness.Apple
                 deviceListener.Dispose();
             }
 
-            return await testReporter.ParseResult();
+            return await testResultParser.ParseResult();
         }
 
         private Dictionary<string, object> GetEnvVariables(

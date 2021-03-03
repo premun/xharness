@@ -28,7 +28,7 @@ namespace Microsoft.DotNet.XHarness.iOS.Shared
     /// Class that gets the result of an executed test application, parses the results and provides information
     /// about the success or failure of the execution.
     /// </summary>
-    public class TestReporter : ITestReporter
+    public class TestResultParser : ITestResultParser
     {
         private const string TimeoutMessage = "Test run timed out after {0} minute(s).";
         private const string CompletionMessage = "Test run completed";
@@ -42,7 +42,6 @@ namespace Microsoft.DotNet.XHarness.iOS.Shared
         private readonly ICrashSnapshotReporter _crashReporter;
         private readonly IResultParser _resultParser;
         private readonly AppBundleInformation _appInfo;
-        private readonly RunMode _runMode;
         private readonly XmlResultJargon _xmlJargon;
         private readonly IMlaunchProcessManager _processManager;
         private readonly string? _deviceName;
@@ -76,7 +75,7 @@ namespace Microsoft.DotNet.XHarness.iOS.Shared
 
         public bool ResultsUseXml => _xmlJargon != XmlResultJargon.Missing;
 
-        public TestReporter(IMlaunchProcessManager processManager,
+        public TestResultParser(IMlaunchProcessManager processManager,
             IFileBackedLog mainLog,
             IReadableLog runLog,
             ILogs logs,
@@ -84,7 +83,6 @@ namespace Microsoft.DotNet.XHarness.iOS.Shared
             ISimpleListener simpleListener,
             IResultParser parser,
             AppBundleInformation appInformation,
-            RunMode runMode,
             XmlResultJargon xmlJargon,
             string? device,
             TimeSpan timeout,
@@ -102,7 +100,6 @@ namespace Microsoft.DotNet.XHarness.iOS.Shared
             _crashLogs = new Logs(logs.Directory);
             _resultParser = parser ?? throw new ArgumentNullException(nameof(parser));
             _appInfo = appInformation ?? throw new ArgumentNullException(nameof(appInformation));
-            _runMode = runMode;
             _xmlJargon = xmlJargon;
             _timeout = timeout;
             _additionalLogsDirectory = additionalLogsDirectory;
@@ -112,7 +109,8 @@ namespace Microsoft.DotNet.XHarness.iOS.Shared
 
             CallbackLog = new CallbackLog(line =>
             {
-                // MT1111: Application launched successfully, but it's not possible to wait for the app to exit as requested because it's not possible to detect app termination when launching using gdbserver
+                // MT1111: Application launched successfully, but it's not possible to wait for the app to exit as
+                // requested because it's not possible to detect app termination when launching using gdbserver
                 _waitedForExit &= line?.Contains("MT1111: ") != true;
                 if (line?.Contains("error MT1007") == true)
                 {
@@ -121,19 +119,191 @@ namespace Microsoft.DotNet.XHarness.iOS.Shared
             });
         }
 
+        public void LaunchCallback(Task<bool> launchResult)
+        {
+            if (launchResult.IsFaulted)
+            {
+                _mainLog.WriteLine($"Test execution failed: {launchResult.Exception}");
+            }
+            else if (launchResult.IsCanceled)
+            {
+                _mainLog.WriteLine("Test execution was cancelled");
+            }
+            else if (launchResult.Result)
+            {
+                _mainLog.WriteLine("Test execution started");
+            }
+            else
+            {
+                _cancellationTokenSource.Cancel();
+                _mainLog.WriteLine("Test execution timed out after {0} minute(s).", _timeoutWatch.Elapsed.TotalMinutes);
+                _timedout = true;
+            }
+        }
+
+        public async Task CollectSimulatorResult(ProcessExecutionResult runResult)
+        {
+            _isSimulatorTest = true;
+            await CollectResult(runResult);
+
+            if (Success != null && !Success.Value)
+            {
+                var pid = await GetPidFromRunLog();
+                if (pid > 0)
+                {
+                    await KillAppProcess(pid, _cancellationTokenSource);
+                }
+                else
+                {
+                    _mainLog.WriteLine("Could not find pid in mtouch output.");
+                }
+            }
+        }
+
+        public async Task CollectDeviceResult(ProcessExecutionResult runResult)
+        {
+            _isSimulatorTest = false;
+            await CollectResult(runResult);
+        }
+
+        public async Task<(TestExecutingResult ExecutingResult, string? ResultMessage)> ParseResult()
+        {
+            TestExecutingResult executingResult;
+            string? resultMessage;
+            var crashed = false;
+
+            if (File.Exists(_listener.TestLog.FullPath))
+            {
+                (Success, crashed, resultMessage) = await ParseResults(_appInfo, _listener.TestLog.FullPath, _timedout);
+            }
+            else if (_timedout)
+            {
+                _mainLog.WriteLine("Test run never launched");
+                resultMessage = "Test runner never started";
+                Success = false;
+            }
+            else if (_launchFailure)
+            {
+                _mainLog.WriteLine("Test run failed to launch");
+                resultMessage = "Test runner failed to launch";
+                Success = false;
+            }
+            else
+            {
+                _mainLog.WriteLine("Test run crashed before it started (no log file produced)");
+                resultMessage = "No test log file was produced";
+                crashed = true;
+                Success = false;
+            }
+
+            if (!Success.HasValue)
+            {
+                Success = false;
+            }
+
+            var crashLogWaitTime = 0;
+            if (!Success.Value)
+            {
+                crashLogWaitTime = 5;
+            }
+
+            if (crashed)
+            {
+                crashLogWaitTime = 30;
+            }
+
+            await _crashReporter.EndCaptureAsync(TimeSpan.FromSeconds(crashLogWaitTime));
+
+            if (_timedout)
+            {
+                executingResult = TestExecutingResult.TimedOut;
+            }
+            else if (_launchFailure)
+            {
+                executingResult = TestExecutingResult.LaunchFailure;
+            }
+            else if (crashed)
+            {
+                executingResult = TestExecutingResult.Crashed;
+            }
+            else if (Success.Value)
+            {
+                executingResult = TestExecutingResult.Succeeded;
+            }
+            else
+            {
+                executingResult = TestExecutingResult.Failed;
+            }
+
+            // Check crash reports to see if any of them explains why the test run crashed.
+            if (!Success.Value)
+            {
+                int pid = -1;
+                string? crashReason = null;
+                foreach (var crashLog in _crashLogs)
+                {
+                    try
+                    {
+                        _logs.Add(crashLog);
+
+                        if (pid == -1)
+                        {
+                            // Find the pid
+                            pid = await GetPidFromMainLog();
+                        }
+
+                        GetCrashReason(pid, crashLog, out crashReason);
+                        if (crashReason != null)
+                        {
+                            break;
+                        }
+                    }
+                    catch (Exception e)
+                    {
+                        var message = string.Format("Failed to process crash report '{1}': {0}", e.Message, crashLog.Description);
+                        _mainLog.WriteLine(message);
+                        _exceptionLogger?.Invoke(2, message);
+                    }
+                }
+
+                if (!string.IsNullOrEmpty(crashReason))
+                {
+                    if (crashReason == "per-process-limit")
+                    {
+                        resultMessage = "Killed due to using too much memory (per-process-limit).";
+                    }
+                    else
+                    {
+                        resultMessage = $"Killed by the OS ({crashReason})";
+                    }
+                }
+                else if (_launchFailure)
+                {
+                    // same as with a crash
+                    resultMessage = $"Launch failure";
+                }
+
+                await GenerateXmlFailures(resultMessage, crashed, crashReason);
+            }
+
+            return (executingResult, resultMessage);
+        }
+
         /// <summary>
         /// Parse the run log and decide if we managed to start the process or not
         /// </summary>
-        private async Task<(int pid, bool launchFailure)> GetPidFromRunLog()
+        private async Task<int> GetPidFromRunLog()
         {
             int pid = -1;
-            bool launchFailure = false;
 
             using var reader = _runLog.GetReader(); // diposed at the end of the method, which is what we want
             if (reader.Peek() == -1)
             {
-                // empty file! we definitely had a launch error in this case
-                launchFailure = true;
+                // Empty file! If the app never connected to our listener, it probably never launched
+                if (!_listener.ConnectedTask.IsCompleted || !_listener.ConnectedTask.Result)
+                {
+                    _launchFailure = true;
+                }
             }
             else
             {
@@ -164,12 +334,12 @@ namespace Microsoft.DotNet.XHarness.iOS.Shared
                     }
                     else if (line.Contains("error MT1008"))
                     {
-                        launchFailure = true;
+                        _launchFailure = true;
                     }
                 }
             }
 
-            return (pid, launchFailure);
+            return pid;
         }
 
         /// <summary>
@@ -276,54 +446,6 @@ namespace Microsoft.DotNet.XHarness.iOS.Shared
             }
         }
 
-        public void LaunchCallback(Task<bool> launchResult)
-        {
-            if (launchResult.IsFaulted)
-            {
-                _mainLog.WriteLine($"Test execution failed: {launchResult.Exception}");
-            }
-            else if (launchResult.IsCanceled)
-            {
-                _mainLog.WriteLine("Test execution was cancelled");
-            }
-            else if (launchResult.Result)
-            {
-                _mainLog.WriteLine("Test execution started");
-            }
-            else
-            {
-                _cancellationTokenSource.Cancel();
-                _mainLog.WriteLine("Test execution timed out after {0} minute(s).", _timeoutWatch.Elapsed.TotalMinutes);
-                _timedout = true;
-            }
-        }
-
-        public async Task CollectSimulatorResult(ProcessExecutionResult runResult)
-        {
-            _isSimulatorTest = true;
-            await CollectResult(runResult);
-
-            if (Success != null && !Success.Value)
-            {
-                var (pid, launchFailure) = await GetPidFromRunLog();
-                _launchFailure = launchFailure;
-                if (pid > 0)
-                {
-                    await KillAppProcess(pid, _cancellationTokenSource);
-                }
-                else
-                {
-                    _mainLog.WriteLine("Could not find pid in mtouch output.");
-                }
-            }
-        }
-
-        public async Task CollectDeviceResult(ProcessExecutionResult runResult)
-        {
-            _isSimulatorTest = false;
-            await CollectResult(runResult);
-        }
-
         private async Task<(string? ResultLine, bool Failed)> GetResultLine(string logPath)
         {
             string? resultLine = null;
@@ -347,10 +469,10 @@ namespace Microsoft.DotNet.XHarness.iOS.Shared
             return (ResultLine: resultLine, Failed: failed);
         }
 
-        private async Task<(string? resultLine, bool failed, bool crashed)> ParseResultFile(AppBundleInformation appInfo, string test_log_path, bool timed_out)
+        private async Task<(string? ResultLine, bool Failed, bool Crashed)> ParseResultFile(AppBundleInformation appInfo, string testLogPath, bool timedOut)
         {
             (string? resultLine, bool failed, bool crashed) parseResult = (null, false, false);
-            if (!File.Exists(test_log_path))
+            if (!File.Exists(testLogPath))
             {
                 parseResult.crashed = true; // if we do not have a log file, the test crashes
                 return parseResult;
@@ -367,13 +489,13 @@ namespace Microsoft.DotNet.XHarness.iOS.Shared
             // that case, we cannot do a TCP connection to xharness to get the log, this is a problem since if we did not get the xml
             // from the TCP connection, we are going to fail when trying to read it and not parse it. Therefore, we are not only
             // going to check if we are in CI, but also if the listener_log is valid.
-            var path = Path.ChangeExtension(test_log_path, "xml");
-            if (path == test_log_path)
+            var path = Path.ChangeExtension(testLogPath, "xml");
+            if (path == testLogPath)
             {
                 path = Path.Combine(Path.GetDirectoryName(path)!, Path.GetFileNameWithoutExtension(path) + "-clean.xml");
             }
 
-            _resultParser.CleanXml(test_log_path, path);
+            _resultParser.CleanXml(testLogPath, path);
 
             if (ResultsUseXml && _resultParser.IsValidXml(path, out var xmlType))
             {
@@ -409,7 +531,7 @@ namespace Microsoft.DotNet.XHarness.iOS.Shared
                     if (_generateHtml)
                     {
                         // write the human readable results in a tmp file, which we later use to step on the logs
-                        var humanReadableLog = _logs.CreateFile(Path.GetFileNameWithoutExtension(test_log_path) + ".log", LogType.NUnitResult);
+                        var humanReadableLog = _logs.CreateFile(Path.GetFileNameWithoutExtension(testLogPath) + ".log", LogType.NUnitResult);
                         (parseResult.resultLine, parseResult.failed) = _resultParser.ParseResults(path, xmlType, humanReadableLog);
                     }
                     else
@@ -438,14 +560,12 @@ namespace Microsoft.DotNet.XHarness.iOS.Shared
                     }
                     _mainLog.WriteLine(new string('#', 10));
                     _mainLog.WriteLine("End of xml results.");
-                    if (timed_out)
+                    if (timedOut)
                     {
-                        WrenchLog.WriteLine($"AddSummary: <b><i>{_runMode} timed out</i></b><br/>");
                         return parseResult;
                     }
                     else
                     {
-                        WrenchLog.WriteLine($"AddSummary: <b><i>{_runMode} crashed</i></b><br/>");
                         _mainLog.WriteLine("Test run crashed");
                         parseResult.crashed = true;
                         return parseResult;
@@ -459,39 +579,35 @@ namespace Microsoft.DotNet.XHarness.iOS.Shared
             // not the most efficient way but this just happens when we run
             // the tests locally and we usually do not run all tests, we are
             // more interested to be efficent on the bots
-            (parseResult.resultLine, parseResult.failed) = await GetResultLine(test_log_path);
+            (parseResult.resultLine, parseResult.failed) = await GetResultLine(testLogPath);
             return parseResult;
         }
 
-        private async Task<(bool Succeeded, bool Crashed, string ResultLine)> TestsSucceeded(AppBundleInformation appInfo, string test_log_path, bool timed_out)
+        private async Task<(bool Succeeded, bool Crashed, string ResultLine)> ParseResults(AppBundleInformation appInfo, string testLogPath, bool timedOut)
         {
-            var (resultLine, failed, crashed) = await ParseResultFile(appInfo, test_log_path, timed_out);
+            var result = await ParseResultFile(appInfo, testLogPath, timedOut);
+
             // read the parsed logs in a human readable way
-            if (resultLine != null)
+            if (result.ResultLine != null)
             {
-                var tests_run = resultLine.Replace("Tests run: ", "");
-                if (failed)
+                if (result.Failed)
                 {
-                    WrenchLog.WriteLine("AddSummary: <b>{0} failed: {1}</b><br/>", _runMode, tests_run);
                     _mainLog.WriteLine("Test run failed");
-                    return (false, crashed, resultLine);
+                    return (false, result.Crashed, result.ResultLine);
                 }
                 else
                 {
-                    WrenchLog.WriteLine("AddSummary: {0} succeeded: {1}<br/>", _runMode, tests_run);
                     _mainLog.WriteLine("Test run succeeded");
-                    return (true, crashed, resultLine);
+                    return (true, result.Crashed, result.ResultLine);
                 }
             }
-            else if (timed_out)
+            else if (timedOut)
             {
-                WrenchLog.WriteLine("AddSummary: <b><i>{0} timed out</i></b><br/>", _runMode);
                 _mainLog.WriteLine("Test run timed out");
                 return (false, false, "Test run timed out");
             }
             else
             {
-                WrenchLog.WriteLine("AddSummary: <b><i>{0} crashed</i></b><br/>", _runMode);
                 _mainLog.WriteLine("Test run crashed");
                 return (false, true, "Test run crashed");
             }
@@ -561,131 +677,6 @@ namespace Microsoft.DotNet.XHarness.iOS.Shared
                     _mainLog.FullPath,
                     _xmlJargon);
             }
-        }
-
-        public async Task<(TestExecutingResult ExecutingResult, string? ResultMessage)> ParseResult()
-        {
-            (TestExecutingResult ExecutingResult, string? ResultMessage) result = (ExecutingResult: TestExecutingResult.Finished, ResultMessage: null);
-            var crashed = false;
-            if (File.Exists(_listener.TestLog.FullPath))
-            {
-                WrenchLog.WriteLine("AddFile: {0}", _listener.TestLog.FullPath);
-                (Success, crashed, result.ResultMessage) = await TestsSucceeded(_appInfo, _listener.TestLog.FullPath, _timedout);
-            }
-            else if (_timedout)
-            {
-                WrenchLog.WriteLine("AddSummary: <b><i>{0} never launched</i></b><br/>", _runMode);
-                _mainLog.WriteLine("Test run never launched");
-                result.ResultMessage = "Test runner never started";
-                Success = false;
-            }
-            else if (_launchFailure)
-            {
-                WrenchLog.WriteLine("AddSummary: <b><i>{0} failed to launch</i></b><br/>", _runMode);
-                _mainLog.WriteLine("Test run failed to launch");
-                result.ResultMessage = "Test runner failed to launch";
-                Success = false;
-            }
-            else
-            {
-                WrenchLog.WriteLine("AddSummary: <b><i>{0} crashed at startup (no log)</i></b><br/>", _runMode);
-                _mainLog.WriteLine("Test run crashed before it started (no log file produced)");
-                result.ResultMessage = "No test log file was produced";
-                crashed = true;
-                Success = false;
-            }
-
-            if (!Success.HasValue)
-            {
-                Success = false;
-            }
-
-            var crashLogWaitTime = 0;
-            if (!Success.Value)
-            {
-                crashLogWaitTime = 5;
-            }
-
-            if (crashed)
-            {
-                crashLogWaitTime = 30;
-            }
-
-            await _crashReporter.EndCaptureAsync(TimeSpan.FromSeconds(crashLogWaitTime));
-
-            if (_timedout)
-            {
-                result.ExecutingResult = TestExecutingResult.TimedOut;
-            }
-            else if (_launchFailure)
-            {
-                result.ExecutingResult = TestExecutingResult.LaunchFailure;
-            }
-            else if (crashed)
-            {
-                result.ExecutingResult = TestExecutingResult.Crashed;
-            }
-            else if (Success.Value)
-            {
-                result.ExecutingResult = TestExecutingResult.Succeeded;
-            }
-            else
-            {
-                result.ExecutingResult = TestExecutingResult.Failed;
-            }
-
-            // Check crash reports to see if any of them explains why the test run crashed.
-            if (!Success.Value)
-            {
-                int pid = -1;
-                string? crashReason = null;
-                foreach (var crashLog in _crashLogs)
-                {
-                    try
-                    {
-                        _logs.Add(crashLog);
-
-                        if (pid == -1)
-                        {
-                            // Find the pid
-                            pid = await GetPidFromMainLog();
-                        }
-
-                        GetCrashReason(pid, crashLog, out crashReason);
-                        if (crashReason != null)
-                        {
-                            break;
-                        }
-                    }
-                    catch (Exception e)
-                    {
-                        var message = string.Format("Failed to process crash report '{1}': {0}", e.Message, crashLog.Description);
-                        _mainLog.WriteLine(message);
-                        _exceptionLogger?.Invoke(2, message);
-                    }
-                }
-
-                if (!string.IsNullOrEmpty(crashReason))
-                {
-                    if (crashReason == "per-process-limit")
-                    {
-                        result.ResultMessage = "Killed due to using too much memory (per-process-limit).";
-                    }
-                    else
-                    {
-                        result.ResultMessage = $"Killed by the OS ({crashReason})";
-                    }
-                }
-                else if (_launchFailure)
-                {
-                    // same as with a crash
-                    result.ResultMessage = $"Launch failure";
-                }
-
-                await GenerateXmlFailures(result.ResultMessage, crashed, crashReason);
-            }
-
-            return result;
         }
     }
 }
