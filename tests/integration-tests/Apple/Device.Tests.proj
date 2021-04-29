@@ -25,6 +25,11 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <!-- apple test / ios-device -->
+    <XHarnessAppleProject Include="$(MSBuildThisFileDirectory)\TestAppBundle.proj">
+      <AdditionalProperties>TestTarget=ios-device;TestAppBundleName=System.Buffers.Tests.app</AdditionalProperties>
+    </XHarnessAppleProject>
+
     <!-- apple run / ios-device -->
     <XHarnessAppleProject Include="$(MSBuildThisFileDirectory)\TestAppBundle.proj">
       <AdditionalProperties>TestTarget=ios-device;TestAppBundleName=HelloiOS.app;IncludesTestRunner=false;ExpectedExitCode=200</AdditionalProperties>
