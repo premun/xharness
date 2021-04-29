@@ -140,333 +140,53 @@ stages:
                 testRunTitle: XHarness unit tests - $(Agent.JobName)
               condition: succeededOrFailed()
 
-  - stage: E2E_Android
-    displayName: Android E2E Tests
-    dependsOn: Build_OSX
-    jobs:
-    - template: /eng/common/templates/jobs/jobs.yml
-      parameters:
-        workspace:
-          clean: all
-        jobs:
-        - job: Linux
-          pool:
-            vmimage: ubuntu-latest
-          strategy:
-            matrix:
-              Build_Debug:
-                _BuildConfig: Debug
-          preSteps:
-          - checkout: self
-            clean: true
-          displayName: Submit Helix Job
-          steps:
-          - task: DownloadPipelineArtifact@2
-            inputs:
-              source: current
-              artifact: Microsoft.DotNet.XHarness.CLI.Debug
-              path: $(Build.SourcesDirectory)/artifacts/packages/$(_BuildConfig)/Shipping/
+  - template: eng/e2e-test.yml
+    parameters:
+      name: E2E_Android
+      displayName: Android E2E Tests
+      testProject: $(Build.SourcesDirectory)/tests/integration-tests/Android/Android.Helix.SDK.Tests.proj
 
-          - script: eng/common/build.sh
-              --configuration $(_BuildConfig)
-              --prepareMachine
-              --ci
-              --restore
-              --test
-              --projects $(Build.SourcesDirectory)/tests/integration-tests/Android/Android.Helix.SDK.Tests.proj
-              /bl:$(Build.SourcesDirectory)/artifacts/log/$(_BuildConfig)/Android.Helix.SDK.Tests.binlog
-              /p:RestoreUsingNuGetTargets=false
-            displayName: Run E2E Tests in Helix
-            env:
-              SYSTEM_ACCESSTOKEN: $(System.AccessToken)
-              HelixAccessToken: ''
+  - template: eng/e2e-test.yml
+    parameters:
+      name: E2E_Android_Manual_Commands
+      displayName: Android E2E Tests - Manual Commands
+      testProject: $(Build.SourcesDirectory)/tests/integration-tests/Android/Android.CLI.Commands.Tests.proj
 
-  - stage: E2E_Android_Manual_Commands
-    displayName: Android E2E Tests - Manual Commands
-    dependsOn: Build_OSX
-    jobs:
-    - template: /eng/common/templates/jobs/jobs.yml
-      parameters:
-        workspace:
-          clean: all
-        jobs:
-        - job: Linux
-          pool:
-            vmimage: ubuntu-latest
-          strategy:
-            matrix:
-              Build_Debug:
-                _BuildConfig: Debug
-          preSteps:
-          - checkout: self
-            clean: true
-          displayName: Submit Helix Job
-          steps:
-          - task: DownloadPipelineArtifact@2
-            inputs:
-              source: current
-              artifact: Microsoft.DotNet.XHarness.CLI.Debug
-              path: $(Build.SourcesDirectory)/artifacts/packages/$(_BuildConfig)/Shipping/
+  - template: eng/e2e-test.yml
+    parameters:
+      name: E2E_Apple_Simulators
+      displayName: Apple E2E Simulator Tests
+      testProject: $(Build.SourcesDirectory)/tests/integration-tests/Apple/Simulator.Tests.proj
 
-          - script: eng/common/build.sh
-              --configuration $(_BuildConfig)
-              --prepareMachine
-              --ci
-              --restore
-              --test
-              --projects $(Build.SourcesDirectory)/tests/integration-tests/Android/Android.CLI.Commands.Tests.proj
-              /bl:$(Build.SourcesDirectory)/artifacts/log/$(_BuildConfig)/Android.CLI.Commands.Tests.binlog
-              /p:RestoreUsingNuGetTargets=false
-            displayName: Run E2E Tests in Helix
-            env:
-              SYSTEM_ACCESSTOKEN: $(System.AccessToken)
-              HelixAccessToken: ''
+  - template: eng/e2e-test.yml
+    parameters:
+      name: E2E_Apple_Devices
+      displayName: Apple E2E Device Tests
+      testProject: $(Build.SourcesDirectory)/tests/integration-tests/Apple/Device.Tests.proj
 
-  - stage: E2E_Apple_Simulators
-    displayName: Apple E2E Simulator Tests
-    dependsOn: Build_OSX
-    jobs:
-    - template: /eng/common/templates/jobs/jobs.yml
-      parameters:
-        workspace:
-          clean: all
-        jobs:
-        - job: OSX
-          pool:
-            name: Hosted macOS
-          strategy:
-            matrix:
-              Build_Debug:
-                _BuildConfig: Debug
-          preSteps:
-          - checkout: self
-            clean: true
-          displayName: Submit Helix Job
-          steps:
-          - task: DownloadPipelineArtifact@2
-            inputs:
-              source: current
-              artifact: Microsoft.DotNet.XHarness.CLI.Debug
-              path: $(Build.SourcesDirectory)/artifacts/packages/$(_BuildConfig)/Shipping/
+  - template: eng/e2e-test.yml
+    parameters:
+      name: E2E_Apple_Simulators_Manual_Commands
+      displayName: Apple E2E Simulator Tests - Manual Commands
+      testProject: $(Build.SourcesDirectory)/tests/integration-tests/Apple/Simulator.Commands.Tests.proj
 
-          - script: eng/common/build.sh
-              --configuration $(_BuildConfig)
-              --prepareMachine
-              --ci
-              --restore
-              --test
-              --projects $(Build.SourcesDirectory)/tests/integration-tests/Apple/Simulator.Tests.proj
-              /bl:$(Build.SourcesDirectory)/artifacts/log/$(_BuildConfig)/Apple.Simulator.Tests.binlog
-              /p:RestoreUsingNuGetTargets=false
-            displayName: Run E2E Tests in Helix
-            env:
-              SYSTEM_ACCESSTOKEN: $(System.AccessToken)
-              HelixAccessToken: ''
+  - template: eng/e2e-test.yml
+    parameters:
+      name: E2E_Apple_Devices_Manual_Commands
+      displayName: Apple E2E Device Tests - Manual Commands
+      testProject: $(Build.SourcesDirectory)/tests/integration-tests/Apple/Device.Commands.Tests.proj
 
-  - stage: E2E_Apple_Devices
-    displayName: Apple E2E Device Tests
-    dependsOn: Build_OSX
-    jobs:
-    - template: /eng/common/templates/jobs/jobs.yml
-      parameters:
-        workspace:
-          clean: all
-        jobs:
-        - job: OSX
-          pool:
-            name: Hosted macOS
-          strategy:
-            matrix:
-              Build_Debug:
-                _BuildConfig: Debug
-          preSteps:
-          - checkout: self
-            clean: true
-          displayName: Submit Helix Job
-          steps:
-          - task: DownloadPipelineArtifact@2
-            inputs:
-              source: current
-              artifact: Microsoft.DotNet.XHarness.CLI.Debug
-              path: $(Build.SourcesDirectory)/artifacts/packages/$(_BuildConfig)/Shipping/
+  - template: eng/e2e-test.yml
+    parameters:
+      name: E2E_SimulatorInstaller
+      displayName: Apple E2E Tests - Simulator Commands
+      testProject: $(Build.SourcesDirectory)/tests/integration-tests/Apple/SimulatorInstaller.Tests.proj
 
-          - script: eng/common/build.sh
-              --configuration $(_BuildConfig)
-              --prepareMachine
-              --ci
-              --restore
-              --test
-              --projects $(Build.SourcesDirectory)/tests/integration-tests/Apple/Device.Tests.proj
-              /bl:$(Build.SourcesDirectory)/artifacts/log/$(_BuildConfig)/Apple.Device.Tests.binlog
-              /p:RestoreUsingNuGetTargets=false
-            displayName: Run E2E Tests in Helix
-            env:
-              SYSTEM_ACCESSTOKEN: $(System.AccessToken)
-              HelixAccessToken: ''
-
-  - stage: E2E_Apple_Simulators_Manual_Commands
-    displayName: Apple E2E Simulator Tests - Manual Commands
-    dependsOn: Build_OSX
-    jobs:
-    - template: /eng/common/templates/jobs/jobs.yml
-      parameters:
-        workspace:
-          clean: all
-        jobs:
-        - job: OSX
-          pool:
-            name: Hosted macOS
-          strategy:
-            matrix:
-              Build_Debug:
-                _BuildConfig: Debug
-          preSteps:
-          - checkout: self
-            clean: true
-          displayName: Submit Helix Job
-          steps:
-          - task: DownloadPipelineArtifact@2
-            inputs:
-              source: current
-              artifact: Microsoft.DotNet.XHarness.CLI.Debug
-              path: $(Build.SourcesDirectory)/artifacts/packages/$(_BuildConfig)/Shipping/
-
-          - script: eng/common/build.sh
-              --configuration $(_BuildConfig)
-              --prepareMachine
-              --ci
-              --restore
-              --test
-              --projects $(Build.SourcesDirectory)/tests/integration-tests/Apple/Simulator.Commands.Tests.proj
-              /bl:$(Build.SourcesDirectory)/artifacts/log/$(_BuildConfig)/Apple.Simulator.Commands.Tests.binlog
-              /p:RestoreUsingNuGetTargets=false
-            displayName: Run E2E Tests in Helix
-            env:
-              SYSTEM_ACCESSTOKEN: $(System.AccessToken)
-              HelixAccessToken: ''
-
-  - stage: E2E_Apple_Devices_Manual_Commands
-    displayName: Apple E2E Device Tests - Manual Commands
-    dependsOn: Build_OSX
-    jobs:
-    - template: /eng/common/templates/jobs/jobs.yml
-      parameters:
-        workspace:
-          clean: all
-        jobs:
-        - job: OSX
-          pool:
-            name: Hosted macOS
-          strategy:
-            matrix:
-              Build_Debug:
-                _BuildConfig: Debug
-          preSteps:
-          - checkout: self
-            clean: true
-          displayName: Submit Helix Job
-          steps:
-          - task: DownloadPipelineArtifact@2
-            inputs:
-              source: current
-              artifact: Microsoft.DotNet.XHarness.CLI.Debug
-              path: $(Build.SourcesDirectory)/artifacts/packages/$(_BuildConfig)/Shipping/
-
-          - script: eng/common/build.sh
-              --configuration $(_BuildConfig)
-              --prepareMachine
-              --ci
-              --restore
-              --test
-              --projects $(Build.SourcesDirectory)/tests/integration-tests/Apple/Device.Commands.Tests.proj
-              /bl:$(Build.SourcesDirectory)/artifacts/log/$(_BuildConfig)/Apple.Device.Commands.Tests.binlog
-              /p:RestoreUsingNuGetTargets=false
-            displayName: Run E2E Tests in Helix
-            env:
-              SYSTEM_ACCESSTOKEN: $(System.AccessToken)
-              HelixAccessToken: ''
-
-  - stage: E2E_SimulatorInstaller
-    displayName: Apple E2E Tests - Simulator Commands
-    dependsOn: Build_OSX
-    jobs:
-    - template: /eng/common/templates/jobs/jobs.yml
-      parameters:
-        workspace:
-          clean: all
-        jobs:
-        - job: OSX
-          pool:
-            name: Hosted macOS
-          strategy:
-            matrix:
-              Build_Debug:
-                _BuildConfig: Debug
-          preSteps:
-          - checkout: self
-            clean: true
-          displayName: Submit Helix Job
-          steps:
-          - task: DownloadPipelineArtifact@2
-            inputs:
-              source: current
-              artifact: Microsoft.DotNet.XHarness.CLI.Debug
-              path: $(Build.SourcesDirectory)/artifacts/packages/$(_BuildConfig)/Shipping/
-
-          - script: eng/common/build.sh
-              --configuration $(_BuildConfig)
-              --prepareMachine
-              --ci
-              --restore
-              --test
-              --projects $(Build.SourcesDirectory)/tests/integration-tests/Apple/SimulatorInstaller.Tests.proj
-              /bl:$(Build.SourcesDirectory)/artifacts/log/$(_BuildConfig)/Apple.SimulatorInstaller.Tests.binlog
-              /p:RestoreUsingNuGetTargets=false
-            displayName: Run E2E Tests in Helix
-            env:
-              SYSTEM_ACCESSTOKEN: $(System.AccessToken)
-              HelixAccessToken: ''
-
-  - stage: E2E_WASM
-    displayName: WASM E2E Tests
-    dependsOn: Build_OSX
-    jobs:
-    - template: /eng/common/templates/jobs/jobs.yml
-      parameters:
-        workspace:
-          clean: all
-        jobs:
-        - job: OSX
-          pool:
-            name: Hosted macOS
-          strategy:
-            matrix:
-              Build_Debug:
-                _BuildConfig: Debug
-          preSteps:
-          - checkout: self
-            clean: true
-          displayName: Submit Helix Job
-          steps:
-          - task: DownloadPipelineArtifact@2
-            inputs:
-              source: current
-              artifact: Microsoft.DotNet.XHarness.CLI.Debug
-              path: $(Build.SourcesDirectory)/artifacts/packages/$(_BuildConfig)/Shipping/
-
-          - script: eng/common/build.sh
-              --configuration $(_BuildConfig)
-              --prepareMachine
-              --ci
-              --restore
-              --test
-              --projects $(Build.SourcesDirectory)/tests/integration-tests/WASM/WASM.Helix.SDK.Tests.proj
-              /bl:$(Build.SourcesDirectory)/artifacts/log/$(_BuildConfig)/WASM.Helix.SDK.Tests.binlog
-              /p:RestoreUsingNuGetTargets=false
-            displayName: Run E2E Tests in Helix
-            env:
-              SYSTEM_ACCESSTOKEN: $(System.AccessToken)
-              HelixAccessToken: ''
+  - template: eng/e2e-test.yml
+    parameters:
+      name: E2E_WASM
+      displayName: WASM E2E Tests
+      testProject: $(Build.SourcesDirectory)/tests/integration-tests/WASM/WASM.Helix.SDK.Tests.proj
 
 - ${{ if eq(variables._RunAsInternal, True) }}:
   - template: eng\common\templates\post-build\post-build.yml
